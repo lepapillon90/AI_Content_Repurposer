@@ -1,0 +1,17 @@
+{
+  "name": "RepurposeAI",
+  "short_name": "RepurposeAI",
+  "description": "Turn one content into many formats with AI.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1E40AF",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
