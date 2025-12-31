@@ -20,6 +20,17 @@
 *   **텍스트 기본**: `#111827` (Tailwind `gray-900`)
 *   **텍스트 보조**: `#6B7280` (Tailwind `gray-500`)
 
+### Pillar Analysis (지표별 색상)
+*   **Hook**: `#6366F1` (Indigo) - 호기심 유도.
+*   **Value**: `#10B981` (Emerald) - 가치 전달.
+*   **Structure**: `#F59E0B` (Amber) - 명확한 구조.
+*   **CTA**: `#EF4444` (Rose) - 행동 유도.
+
+### Dark Mode
+*   **Slate Background**: `#0F172A`
+*   **Card Background**: `#1E293B`
+*   **Border**: `#334155`
+
 ---
 
 ## 2. 타이포그래피
@@ -49,11 +60,19 @@
 *   깔끔한 테두리, 기본 색상과 일치하는 포커스 링.
 *   `border-gray-300 focus:ring-2 focus:ring-blue-800 focus:border-transparent`
 
+### 분석 뱃지 (Pillar Badges)
+*   인터랙티브 요소: `cursor: pointer`, `hover: scale-105`, `active: scale-95`.
+*   디자인: 파스텔 톤 배경 + 진한 텍스트/아이콘 조합.
+
+### 상세 모달 (Detail Modal)
+*   애니메이션: 아래에서 위로 솟아오르는 슬라이드 효과 (`translate-y-full` to `translate-y-0`).
+*   배경: `backdrop-blur-sm` 처리된 반투명 레이어.
+
 ---
 
 ## 4. 간격 및 레이아웃
 *   **컨테이너**: `max-w-4xl` 중앙 정렬.
 *   **그리드**:
-    *   모바일: 단일 컬럼 `grid-cols-1`
-    *   데스크톱: 1:1 분할 `md:grid-cols-2`
+    - 모바일: 단일 컬럼 `grid-cols-1`, 통합 스크롤 적용.
+    - 데스크톱: 좌측 분석/우측 편집 2컬럼 레이아웃, 독립 스크롤 유지.
 *   **패딩**: `p-6` 또는 `p-8`로 충분한 여백 확보.

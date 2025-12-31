@@ -95,8 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Re-attach sidebar events after re-rendering
-            // Header button (hamburger) is NOT re-rendered, so its listener stays.
-            // But Overlay IS re-rendered (it's part of renderSidebar).
             const sidebarOverlay = document.getElementById('sidebar-overlay');
             if (sidebarOverlay) {
                 sidebarOverlay.addEventListener('click', toggleSidebar);
@@ -104,8 +102,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             lucide.createIcons();
 
-            // Re-check Auth Context after render
-            updateAuthUI();
+            // Re-initialization for specific views if needed
+            if (hash === 'home') {
+                updateDashboardStats();
+            } else if (hash === 'dashboard') {
+                loadHistory();
+            }
         }
 
         // 2. Toggle Views
@@ -119,15 +121,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 3. Load specific view data
-        // 3. Load specific view data
-        if (hash === 'dashboard') {
+        if (hash === 'home') {
+            updateDashboardStats();
+        } else if (hash === 'dashboard') {
             loadHistory();
         } else if (hash === 'brands') {
             // Init Brands Logic
             if (typeof initBrands === 'function') initBrands();
         }
 
-        // Close mobile sidebar if open (using new function)
+        // Close mobile sidebar if open
         const sidebar = document.getElementById('sidebar');
         if (sidebar && !sidebar.classList.contains('-translate-x-full')) {
             toggleSidebar();
@@ -136,6 +139,201 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.classList.remove('overflow-hidden');
         }
     }
+
+    // --- Dashboard Logic ---
+
+    function updateDashboardStats() {
+        const history = JSON.parse(localStorage.getItem('rep_history') || '[]');
+
+        // Total Count
+        const totalCount = history.length;
+        document.getElementById('stat-total-count').innerText = totalCount;
+
+        // Average Viral Score
+        let totalScore = 0;
+        let scoreCount = 0;
+
+        // प्लेटफार्म별 통계 (Most used platform)
+        const platformCounts = {};
+
+        // 이번 주 생성 건수
+        const now = new Date();
+        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        let weekCount = 0;
+
+        history.forEach(item => {
+            // Score
+            if (item.metadata && item.metadata.viralScore) {
+                totalScore += parseInt(item.metadata.viralScore);
+                scoreCount++;
+            }
+
+            // Platform
+            if (item.platform) {
+                platformCounts[item.platform] = (platformCounts[item.platform] || 0) + 1;
+            }
+
+            // Week count
+            if (item.timestamp) {
+                const itemDate = new Date(item.timestamp);
+                if (itemDate >= oneWeekAgo) weekCount++;
+            }
+        });
+
+        const avgScore = scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0;
+        document.getElementById('stat-avg-score').innerText = avgScore;
+
+        let topPlatform = '-';
+        let maxCount = 0;
+        for (const [platform, count] of Object.entries(platformCounts)) {
+            if (count > maxCount) {
+                maxCount = count;
+                topPlatform = platform;
+            }
+        }
+        document.getElementById('stat-top-platform').innerText = topPlatform;
+        document.getElementById('stat-week-count').innerText = weekCount;
+    }
+
+    function loadHistory() {
+        const container = document.getElementById('history-container');
+        const emptyState = document.getElementById('history-empty-state');
+        if (!container) return;
+
+        const history = JSON.parse(localStorage.getItem('rep_history') || '[]');
+
+        if (history.length === 0) {
+            container.innerHTML = '';
+            emptyState.classList.remove('hidden');
+            return;
+        }
+
+        emptyState.classList.add('hidden');
+        container.innerHTML = history.reverse().map(item => {
+            const date = new Date(item.timestamp).toLocaleDateString();
+
+            // Platform Icons & Colors Helper
+            const getPlatformStyle = (p) => {
+                const map = {
+                    'twitter': { icon: 'twitter', color: 'text-sky-500', bg: 'bg-sky-500/10', border: 'border-sky-500/20' },
+                    'linkedin': { icon: 'linkedin', color: 'text-blue-600', bg: 'bg-blue-600/10', border: 'border-blue-600/20' },
+                    'naver_blog': { icon: 'layout', color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+                    'instagram_feed': { icon: 'instagram', color: 'text-pink-500', bg: 'bg-pink-500/10', border: 'border-pink-500/20' },
+                    'youtube_shorts': { icon: 'play', color: 'text-red-600', bg: 'bg-red-600/10', border: 'border-red-600/20' },
+                    'instagram_reels': { icon: 'instagram', color: 'text-pink-600', bg: 'bg-pink-600/10', border: 'border-pink-600/20' },
+                    'tiktok': { icon: 'music', color: 'text-gray-900 dark:text-white', bg: 'bg-gray-900/10 dark:bg-white/10', border: 'border-gray-900/20 dark:border-white/20' }
+                };
+                return map[p] || { icon: 'file-text', color: 'text-gray-500', bg: 'bg-gray-500/10', border: 'border-gray-500/20' };
+            };
+
+            const style = getPlatformStyle(item.platform);
+
+            return `
+                <div class="group relative bg-white dark:bg-dark-card border border-gray-100 dark:border-white/5 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full">
+                    
+                    <!-- Header -->
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg ${style.bg} ${style.color} ${style.border} border border-dashed">
+                            <i data-lucide="${style.icon}" class="w-4 h-4"></i>
+                            <span class="text-xs font-bold uppercase tracking-wide">${item.platform.replace('_', ' ')}</span>
+                        </div>
+                        <div class="text-[10px] font-medium text-gray-400 bg-gray-50 dark:bg-white/5 px-2 py-1 rounded-md">
+                            ${date}
+                        </div>
+                    </div>
+
+                    <!-- Content Preview -->
+                    <div class="flex-grow mb-6">
+                        <div class="relative">
+                            <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed line-clamp-3 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
+                                ${item.content.replace(/<[^>]*>/g, '').substring(0, 150)}...
+                            </p>
+                            <!-- Fade Overlay -->
+                            <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-dark-card to-transparent"></div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-white/5">
+                        <div class="flex items-center gap-1.5 text-xs text-gray-500">
+                             ${item.metadata && item.metadata.viralScore ? `
+                                <i data-lucide="trending-up" class="w-3.5 h-3.5 text-brand"></i>
+                                <span class="font-bold text-gray-900 dark:text-white">${item.metadata.viralScore}</span> Score
+                             ` : ''}
+                        </div>
+
+                        <div class="flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button class="view-history-detail p-2 hover:bg-brand hover:text-white text-gray-400 rounded-lg transition-all" data-id="${item.id}" title="상세보기">
+                                <i data-lucide="eye" class="w-4 h-4"></i>
+                            </button>
+                            <button class="delete-history-btn p-2 hover:bg-red-500 hover:text-white text-gray-400 rounded-lg transition-all" data-id="${item.id}" title="삭제">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        lucide.createIcons();
+
+        // Attach listeners
+        document.querySelectorAll('.delete-history-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                const id = parseInt(e.currentTarget.dataset.id);
+                deleteHistoryItem(id);
+            };
+        });
+
+        document.querySelectorAll('.view-history-detail').forEach(btn => {
+            btn.onclick = (e) => {
+                const id = parseInt(e.currentTarget.dataset.id);
+                const item = history.find(h => h.id === id);
+                if (item) {
+                    widgetService.open(item.content, item.platform, item.metadata);
+                }
+            };
+        });
+    }
+
+    async function deleteHistoryItem(id) {
+        const confirmed = await showAppModal({
+            title: '기록 삭제',
+            message: '선택한 생성 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
+            confirmText: '삭제하기',
+            cancelText: '취소',
+            type: 'confirm'
+        });
+
+        if (confirmed) {
+            let history = JSON.parse(localStorage.getItem('rep_history') || '[]');
+            history = history.filter(item => item.id !== id);
+            localStorage.setItem('rep_history', JSON.stringify(history));
+            loadHistory();
+            updateDashboardStats();
+            showToast('기록이 삭제되었습니다.');
+        }
+    }
+
+    // Helper: Save to History
+    function saveToHistory(content, platform, originalInput, metadata) {
+        if (!user) return;
+
+        const history = JSON.parse(localStorage.getItem('rep_history') || '[]');
+        const newItem = {
+            id: Date.now(),
+            content: content,
+            originalInput: originalInput || '',
+            platform: platform,
+            metadata: metadata || null,
+            timestamp: new Date().toISOString()
+        };
+        history.push(newItem);
+        localStorage.setItem('rep_history', JSON.stringify(history));
+    }
+
+
+
 
     // --- Sidebar Logic ---
     function toggleSidebar() {
@@ -198,31 +396,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const charCount = document.getElementById('char-count');
     const generateBtn = document.getElementById('generate-btn');
     const platformInputs = document.querySelectorAll('input[name="platform"]');
-    const outputCard = document.getElementById('output-card');
-    const outputContent = document.getElementById('output-content');
-    const outputPlaceholder = document.getElementById('output-placeholder');
-    const outputLoader = document.getElementById('output-loader');
-    const copyBtn = document.getElementById('copy-btn');
     const toast = document.getElementById('toast');
 
     // Auth Simulation Logic
     const user = JSON.parse(localStorage.getItem('rep_user'));
 
     function updateAuthUI() {
-        // Elements inside dynamic header need re-selection
         const loginBtn = document.getElementById('login-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const sidebarUserName = document.getElementById('sidebar-user-name');
 
+        const currentUser = JSON.parse(localStorage.getItem('rep_user'));
 
-        if (user) {
+        if (currentUser) {
             if (loginBtn) loginBtn.classList.add('hidden');
-            // if (dashboardBtn) dashboardBtn.classList.remove('hidden'); // Removed
             if (logoutBtn) logoutBtn.classList.remove('hidden');
-            if (sidebarUserName) sidebarUserName.textContent = user.name;
+            if (sidebarUserName) sidebarUserName.textContent = currentUser.name;
         } else {
             if (loginBtn) loginBtn.classList.remove('hidden');
-            // if (dashboardBtn) dashboardBtn.classList.add('hidden'); // Removed
             if (logoutBtn) logoutBtn.classList.add('hidden');
             if (sidebarUserName) sidebarUserName.textContent = 'Guest';
         }
@@ -242,145 +433,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Call once on load
     updateAuthUI();
 
-    // Helper: Save to History
-    function saveToHistory(content, platform, originalInput) {
-        if (!user) return; // Only save if logged in
-
-        const history = JSON.parse(localStorage.getItem('rep_history') || '[]');
-        const newItem = {
-            id: Date.now(),
-            content: content,
-            originalInput: originalInput || '',
-            platform: platform,
-            timestamp: new Date().toISOString()
-        };
-        history.push(newItem);
-        localStorage.setItem('rep_history', JSON.stringify(history));
-    }
 
 
-    // --- Dashboard History Logic ---
-    function loadHistory() {
-        const historyContainer = document.getElementById('history-container');
-        const emptyState = document.getElementById('empty-state');
 
-        if (!historyContainer) return; // Should exist now in index.html
 
-        // Auth Redirect for Dashboard
-        if (!user) {
-            window.location.href = 'login.html';
-            return;
-        }
-
-        const history = JSON.parse(localStorage.getItem('rep_history') || '[]');
-        historyContainer.innerHTML = ''; // Clear current
-
-        if (history.length === 0) {
-            if (emptyState) emptyState.classList.remove('hidden');
-        } else {
-            if (emptyState) emptyState.classList.add('hidden');
-
-            history.reverse().forEach(item => {
-                const date = new Date(item.timestamp).toLocaleDateString() + ' ' + new Date(item.timestamp).toLocaleTimeString();
-
-                const card = document.createElement('div');
-                card.className = 'bg-white dark:bg-dark-card p-6 rounded-2xl border border-gray-200 dark:border-dark-border shadow-sm hover:shadow-md transition-all group';
-
-                let platformIcon = 'file-text';
-                let platformColor = 'text-gray-500';
-                if (item.platform === 'twitter') { platformIcon = 'twitter'; platformColor = 'text-blue-400'; }
-                else if (item.platform === 'linkedin') { platformIcon = 'linkedin'; platformColor = 'text-blue-700'; }
-                else if (item.platform === 'instagram') { platformIcon = 'instagram'; platformColor = 'text-pink-500'; }
-                else if (item.platform === 'youtube') { platformIcon = 'youtube'; platformColor = 'text-red-500'; }
-
-                card.innerHTML = `
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="p-2 rounded-lg bg-gray-50 dark:bg-gray-800 ${platformColor}">
-                                <i data-lucide="${platformIcon}" class="w-5 h-5"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-sm font-bold text-gray-900 dark:text-white capitalize">${item.platform} Post</h3>
-                                <p class="text-xs text-gray-400">${date}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-1">
-                            <button class="copy-item-btn text-gray-400 hover:text-brand transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg" data-content="${encodeURIComponent(item.content)}" title="복사">
-                                <i data-lucide="copy" class="w-4 h-4"></i>
-                            </button>
-                            <button onclick="deleteHistoryItem(${item.id})" class="text-gray-400 hover:text-red-500 transition-colors p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg" title="삭제">
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    ${item.originalInput ? `
-                    <div class="mb-3">
-                         <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">원본 내용:</p>
-                         <div class="text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-dark-bg p-3 rounded-lg italic border border-gray-200 dark:border-dark-border">
-                            "${item.originalInput}"
-                         </div>
-                    </div>
-                    ` : ''}
-
-                    <div class="relative">
-                        <div id="content-${item.id}" class="text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap leading-relaxed line-clamp-3 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-inner transition-all duration-300">
-                            ${marked.parse(item.content)}
-                        </div>
-                        <button onclick="toggleContent('${item.id}')" id="btn-${item.id}" class="mt-2 text-xs font-medium text-brand hover:text-brand-dark dark:text-brand-light dark:hover:text-white flex items-center gap-1 transition-colors">
-                            <span>전체내용 보기</span>
-                            <i data-lucide="chevron-down" class="w-3 h-3"></i>
-                        </button>
-                    </div>
-                `;
-                historyContainer.appendChild(card);
-            });
-
-            // Re-initialize icons for new elements
-            lucide.createIcons();
-        }
-
-        // Global function to toggle content
-        window.toggleContent = function (id) {
-            const contentDiv = document.getElementById(`content-${id}`);
-            const btn = document.getElementById(`btn-${id}`);
-            const isCollapsed = contentDiv.classList.contains('line-clamp-3');
-
-            if (isCollapsed) {
-                contentDiv.classList.remove('line-clamp-3');
-                btn.innerHTML = `<span>접기</span><i data-lucide="chevron-up" class="w-3 h-3"></i>`;
-            } else {
-                contentDiv.classList.add('line-clamp-3');
-                btn.innerHTML = `<span>전체내용 보기</span><i data-lucide="chevron-down" class="w-3 h-3"></i>`;
-            }
-            lucide.createIcons();
-        };
-
-        // Global function to delete item
-        window.deleteHistoryItem = async function (id) {
-            const confirmed = await showAppConfirm('기록 삭제', '이 기록을 정말 삭제하시겠습니까?');
-            if (confirmed) {
-                const history = JSON.parse(localStorage.getItem('rep_history') || '[]');
-                const newHistory = history.filter(item => item.id !== id);
-                localStorage.setItem('rep_history', JSON.stringify(newHistory));
-                loadHistory(); // Reload UI
-                showToast('삭제되었습니다.', 2000);
-            }
-        };
-
-        // Re-render icons for new elements
-        lucide.createIcons();
-
-        // Handle Copy for History Items
-        document.querySelectorAll('.copy-item-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const content = decodeURIComponent(e.currentTarget.dataset.content);
-                navigator.clipboard.writeText(content).then(() => {
-                    showToast('복사되었습니다');
-                });
-            });
-        });
-    }
 
     // --- Content Generation (Only if elements exist) ---
     if (inputText && generateBtn) {
@@ -415,6 +471,321 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. Generate Action
         let isGenerating = false;
         const SIMULATION_DELAY_MS = 1500;
+
+        // Render Analysis Widget Helper
+        function renderAnalysisWidget(data, isWidget = false) {
+            const prefix = isWidget ? 'widget-' : 'viral-';
+            const keywordsPrefix = isWidget ? 'widget-' : 'analysis-';
+
+            const scoreVal = document.getElementById(`${prefix}score-value`);
+            const scoreText = document.getElementById(`${prefix}score-text`);
+            const scoreCircle = document.getElementById(`${prefix}score-circle`);
+            const reason = document.getElementById(`${prefix}score-reason`);
+            const keywordsContainer = document.getElementById(`${keywordsPrefix}keywords`);
+            const pillarsContainer = document.getElementById(`${keywordsPrefix}pillars`);
+            const seoTitleEl = document.getElementById(isWidget ? 'widget-seo-title' : 'analysis-seo-title');
+
+            // Score Logic
+            const score = data.viralScore || 0;
+            if (scoreVal) scoreVal.textContent = score;
+
+            let grade = '분석 필요';
+            let colorClass = 'text-red-500';
+            if (score >= 90) { grade = '바이럴 가능성 매우 높음'; colorClass = 'text-purple-600 dark:text-purple-400'; }
+            else if (score >= 80) { grade = '우수'; colorClass = 'text-green-600 dark:text-green-400'; }
+            else if (score >= 70) { grade = '좋음'; colorClass = 'text-indigo-600 dark:text-indigo-400'; }
+            else if (score >= 50) { grade = '보통'; colorClass = 'text-yellow-600 dark:text-yellow-400'; }
+            else { grade = '개선 필요'; }
+
+            if (scoreText) {
+                scoreText.textContent = grade;
+                scoreText.className = isWidget ? `text-sm font-black ${colorClass} transition-all` : `text-xs font-bold ${colorClass}`;
+            }
+
+            // Circle Animation
+            // Main: 125.6 (r=20), Widget: 175.9 (r=28)
+            const maxOffset = isWidget ? 175.9 : 125.6;
+            const offset = maxOffset - (score / 100 * maxOffset);
+            if (scoreCircle) {
+                scoreCircle.setAttribute('stroke-dasharray', maxOffset);
+                scoreCircle.style.strokeDashoffset = maxOffset;
+                setTimeout(() => {
+                    scoreCircle.style.strokeDashoffset = offset;
+                }, 100);
+            }
+
+            // Reason (Clean up redundant score patterns if present)
+            if (reason) {
+                let cleanReason = data.viralScoreReason || '분석 정보를 불러올 수 없습니다.';
+                // Strip patterns like "Hook: 38/40, Value: 28/30, Structure: 20/20, CTA: 10/10." or "Hook: 38, ..."
+                cleanReason = cleanReason.replace(/Hook:?\s*\d+\/\d+,?\s*Value:?\s*\d+\/\d+,?\s*Structure:?\s*\d+\/\d+,?\s*CTA:?\s*\d+\/\d+\.?\s*/i, '');
+                // Also strip simpler patterns if the AI misses the full block
+                cleanReason = cleanReason.replace(/Hook:?\s*\d+,?\s*Value:?\s*\d+,?\s*Structure:?\s*\d+,?\s*CTA:?\s*\d+\.?\s*/i, '');
+
+                reason.textContent = cleanReason.trim();
+            }
+
+            // Decomposed Pillar Badges
+            if (pillarsContainer) {
+                if (data.decomposed) {
+                    const d = data.decomposed;
+                    const pillars = [
+                        { key: 'hook', label: 'Hook', icon: 'zap', class: 'badge-hook', val: d.hook },
+                        { key: 'value', label: 'Value', icon: 'lightbulb', class: 'badge-value', val: d.value },
+                        { key: 'structure', label: 'Structure', icon: 'layout', class: 'badge-structure', val: d.structure },
+                        { key: 'cta', label: 'CTA', icon: 'mouse-pointer-2', class: 'badge-cta', val: d.cta }
+                    ];
+
+                    pillarsContainer.innerHTML = pillars.map(p => {
+                        const scoreData = p.val || { score: 0, comment: '' };
+                        const maxScore = p.key === 'hook' ? 40 : p.key === 'value' ? 30 : p.key === 'structure' ? 20 : 10;
+
+                        // Pass data as JSON strings for the onclick handler
+                        const safeComment = (scoreData.comment || p.label).replace(/'/g, "\\'");
+
+                        return `
+                            <div class="badge-pillar ${p.class} group/pillar relative cursor-pointer" 
+                                 onclick="window.showPillarDetail('${p.label}', ${scoreData.score}, ${maxScore}, '${safeComment}', '${p.icon}')">
+                                <i data-lucide="${p.icon}"></i>
+                                <span>${p.label} ${scoreData.score}</span>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    pillarsContainer.innerHTML = '';
+                }
+            }
+
+            // Recommended Tags (Keywords)
+            if (keywordsContainer) {
+                if (data.keywords && data.keywords.length > 0) {
+                    keywordsContainer.innerHTML = data.keywords.slice(0, 8).map(k =>
+                        `<span class="px-2 py-0.5 bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-md text-[10px] text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap shadow-sm">
+                            #${k}
+                        </span>`
+                    ).join('');
+                } else {
+                    keywordsContainer.innerHTML = '<p class="text-[10px] text-gray-400">데이터 없음</p>';
+                }
+            }
+
+            // SEO Title
+            if (seoTitleEl) seoTitleEl.textContent = data.seoTitle || '-';
+
+            // Re-initialize icons inside the container if it was updated
+            lucide.createIcons();
+        }
+
+        // Pillar Detail Modal Logic
+        window.showPillarDetail = function (title, score, maxScore, comment, icon) {
+            const modal = document.getElementById('pillar-detail-modal');
+            const container = document.getElementById('pillar-detail-container');
+            const backdrop = document.getElementById('pillar-detail-backdrop');
+
+            if (!modal || !container || !backdrop) return;
+
+            document.getElementById('pillar-modal-title').textContent = title;
+            document.getElementById('pillar-modal-score').textContent = `Score: ${score}/${maxScore}`;
+            document.getElementById('pillar-modal-comment').textContent = comment;
+
+            // Set icon
+            const iconContainer = document.getElementById('pillar-modal-icon');
+            if (iconContainer) {
+                iconContainer.innerHTML = `<i data-lucide="${icon}"></i>`;
+                lucide.createIcons();
+            }
+
+            // Show Modal
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                backdrop.classList.add('opacity-100');
+                container.classList.add('opacity-100', 'scale-100');
+                container.classList.remove('scale-95', 'opacity-0');
+            }, 10);
+        };
+
+        function closePillarModal() {
+            const modal = document.getElementById('pillar-detail-modal');
+            const container = document.getElementById('pillar-detail-container');
+            const backdrop = document.getElementById('pillar-detail-backdrop');
+
+            if (!modal || !container || !backdrop) return;
+
+            backdrop.classList.remove('opacity-100');
+            container.classList.remove('opacity-100', 'scale-100');
+            container.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        document.getElementById('close-pillar-modal')?.addEventListener('click', closePillarModal);
+        document.getElementById('pillar-modal-close-btn')?.addEventListener('click', closePillarModal);
+        document.getElementById('pillar-detail-backdrop')?.addEventListener('click', closePillarModal);
+
+        // Copy Keywords Logic Setup
+        function setupKeywordCopy(btnId, containerId) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            if (btn.hasAttribute('data-listener-attached')) return;
+
+            btn.setAttribute('data-listener-attached', 'true');
+            btn.addEventListener('click', () => {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+
+                const tags = Array.from(container.querySelectorAll('span'))
+                    .map(span => span.textContent.trim())
+                    .join(' ');
+
+                if (tags) {
+                    navigator.clipboard.writeText(tags).then(() => {
+                        const originalHtml = btn.innerHTML;
+                        btn.innerHTML = `<i data-lucide="check" class="w-3 h-3"></i> Copied!`;
+                        setTimeout(() => {
+                            btn.innerHTML = originalHtml;
+                            lucide.createIcons();
+                        }, 2000);
+                    });
+                }
+            });
+        }
+
+        setupKeywordCopy('widget-copy-keywords', 'widget-keywords');
+
+        // Expose to window for history.js
+        window.renderAnalysisWidget = renderAnalysisWidget;
+
+        // --- Widget Service ---
+        window.widgetService = {
+            metadata: null,
+            results: {},
+            currentPlatform: null,
+
+            open: function (metadata, generatedContent) {
+                this.metadata = metadata;
+                this.results = this.parseResults(generatedContent);
+
+                const widget = document.getElementById('result-widget');
+                const container = document.getElementById('widget-container');
+
+                // Reset scroll
+                document.getElementById('widget-editor').scrollTop = 0;
+
+                // Show modal
+                widget.classList.remove('hidden');
+                setTimeout(() => {
+                    document.body.classList.add('widget-open');
+                    container.classList.remove('translate-x-full');
+                }, 10);
+
+                // Render Analytics
+                this.renderAnalytics();
+
+                // Render Tabs
+                this.renderTabs();
+
+                // Select First Platform
+                const platforms = Object.keys(this.results);
+                if (platforms.length > 0) {
+                    this.switchTab(platforms[0]);
+                }
+
+                lucide.createIcons();
+            },
+
+            close: function () {
+                const widget = document.getElementById('result-widget');
+                const container = document.getElementById('widget-container');
+
+                container.classList.add('translate-x-full');
+                setTimeout(() => {
+                    document.body.classList.remove('widget-open');
+                    widget.classList.add('hidden');
+                }, 300);
+            },
+
+            parseResults: function (content) {
+                const results = {};
+                // Split by "## [Platform Name]" headers
+                const sections = content.split(/^##\s+/m);
+
+                sections.forEach(section => {
+                    if (!section.trim()) return;
+
+                    const lines = section.split('\n');
+                    const title = lines[0].trim();
+                    const body = lines.slice(1).join('\n').trim();
+
+                    if (title && body) {
+                        results[title] = body;
+                    }
+                });
+
+                // Fallback for single platform without header
+                if (Object.keys(results).length === 0 && content.trim()) {
+                    results['Generated Content'] = content.trim();
+                }
+
+                return results;
+            },
+
+            renderAnalytics: function () {
+                const data = this.metadata || {};
+                renderAnalysisWidget(data, true); // true for isWidget
+            },
+
+            renderTabs: function () {
+                const container = document.getElementById('widget-tabs');
+                container.innerHTML = Object.keys(this.results).map(platform => {
+                    const isActive = platform === this.currentPlatform;
+                    return `<button class="platform-tab ${isActive ? 'active' : ''}" onclick="window.widgetService.switchTab('${platform}')">
+                        ${platform}
+                    </button>`;
+                }).join('');
+            },
+
+            switchTab: function (platform) {
+                this.currentPlatform = platform;
+                const editor = document.getElementById('widget-editor');
+                const content = this.results[platform];
+
+                // Update Tabs
+                this.renderTabs();
+
+                // Update Editor
+                if (editor && content) {
+                    // Use marked for preview, but we might want RAW for editing.
+                    // For now, let's show MD rendered preview in the editor-like area.
+                    editor.innerHTML = marked.parse(content);
+                }
+            }
+        };
+
+        // Modal Event Listeners
+        document.getElementById('close-widget-btn').addEventListener('click', () => window.widgetService.close());
+        document.getElementById('widget-backdrop').addEventListener('click', () => window.widgetService.close());
+
+        document.getElementById('widget-copy-content').addEventListener('click', () => {
+            const editor = document.getElementById('widget-editor');
+            if (editor) {
+                // Get innerText to strip HTML tags if needed, or just keep as is
+                const text = editor.innerText;
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('콘텐츠가 복사되었습니다!');
+                });
+            }
+        });
+
+        document.getElementById('widget-copy-keywords').addEventListener('click', () => {
+            if (window.widgetService.metadata?.keywords) {
+                const tags = window.widgetService.metadata.keywords.join(' ');
+                navigator.clipboard.writeText(tags).then(() => {
+                    showToast('키워드가 복사되었습니다!');
+                });
+            }
+        });
 
         generateBtn.addEventListener('click', async () => {
             const text = inputText.value.trim();
@@ -455,115 +826,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 const languageSelect = document.getElementById('language-select');
                 const selectedLanguage = languageSelect ? languageSelect.value : 'Korean';
 
-                // Get Selected Brand
-                let brandId = null;
-                if (window.brandService) {
-                    brandId = window.brandService.getCurrentBrandId();
-                }
+                // Get Selected Tone/Style (Replaces complex Brand logic for Quick Create)
+                const toneSelect = document.getElementById('tone-select');
+                const selectedTone = toneSelect ? toneSelect.value : 'professional';
+
+                // Construct synthetic brand input for AI Service
+                const brandInput = {
+                    name: 'Custom Tone',
+                    tone: selectedTone.charAt(0).toUpperCase() + selectedTone.slice(1),
+                    style: `${selectedTone} Style`,
+                    keywords: '',
+                    forbidden: ''
+                };
 
                 // API Key is handled globally via Settings/localStorage now.
 
-                const generatedContent = await window.aiService.generateContent(text, selectedPlatforms, selectedLanguage, brandId);
+                const rawContent = await window.aiService.generateContent(text, selectedPlatforms, selectedLanguage, brandInput);
 
-                // Display Result with Markdown
-                outputContent.innerHTML = marked.parse(generatedContent);
-                outputContent.classList.remove('hidden');
+                // Parse Metadata
+                const metadataSeparator = "---METADATA---";
+                let generatedContent = rawContent;
+                let metadata = null;
 
-                // Show Translation Controls
-                translateSection.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-1');
-                copyBtn.classList.remove('opacity-0', 'pointer-events-none');
-                copyBtn.disabled = false;
+                if (rawContent.includes(metadataSeparator)) {
+                    const parts = rawContent.split(metadataSeparator);
+                    generatedContent = parts[0].trim();
+                    try {
+                        let jsonStr = parts[1].trim();
+                        // Remove Markdown Code Blocks if present
+                        jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+                        metadata = JSON.parse(jsonStr);
+                    } catch (e) {
+                        console.warn('Metadata Parse Error:', e);
+                    }
+                }
 
-                showToast('콘텐츠가 생성되었습니다!', 2000);
+                if (window.widgetService) {
+                    window.widgetService.open(metadata, generatedContent);
+                }
 
-                // Save to History (Save RAW text for editing/re-use, but display can be MD)
-                // For multi-platform, we save the combined result labeled as 'Multi-Platform' or the specific list
+                showToast('생성이 완료되었습니다! 위젯에서 편집을 계속하세요.', 3000);
+
+                // Save to History
                 const platformLabel = selectedPlatforms.length > 1 ? 'Multi-Platform' : selectedPlatforms[0];
-                saveToHistory(generatedContent, platformLabel, text);
+                saveToHistory(generatedContent, platformLabel, text, metadata);
+
+
 
             } catch (error) {
                 console.error('Generation failed:', error);
-                const errorMessage = error.message;
-
-                if (errorMessage === 'OPENAI_INVALID_KEY') {
-                    outputContent.innerHTML = `
-                        <div class="flex flex-col items-center justify-center py-10 text-center space-y-4">
-                            <div class="w-12 h-12 bg-red-50 dark:bg-red-900/10 rounded-full flex items-center justify-center text-red-500">
-                                <i data-lucide="key" class="w-6 h-6"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-base font-bold text-gray-900 dark:text-white">API 키 오류 (OpenAI)</h3>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-xs">등록된 OpenAI API 키가 유효하지 않습니다.</p>
-                            </div>
-                            <div class="flex flex-col gap-2">
-                                <button onclick="window.location.hash = 'settings';" class="px-5 py-2 bg-brand text-white rounded-xl text-xs font-bold shadow-lg shadow-brand/20 flex items-center gap-2">
-                                    설정에서 키 다시 입력 <i data-lucide="arrow-right" class="w-3 h-3"></i>
-                                </button>
-                                <a href="https://platform.openai.com/api-keys" target="_blank" class="text-xs text-brand hover:underline font-bold">
-                                    OpenAI 대시보드에서 키 확인하기
-                                </a>
-                            </div>
-                        </div>
-                    `;
-                } else if (errorMessage === 'OPENAI_QUOTA_EXCEEDED') {
-                    outputContent.innerHTML = `
-                        <div class="flex flex-col items-center justify-center py-10 text-center space-y-4">
-                            <div class="w-12 h-12 bg-orange-50 dark:bg-orange-900/10 rounded-full flex items-center justify-center text-orange-500">
-                                <i data-lucide="zap-off" class="w-6 h-6"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-base font-bold text-gray-900 dark:text-white">생성 할당량 초과 (OpenAI)</h3>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-xs">OpenAI 계정의 사용 가능 금액이 부족하거나 할당량을 모두 사용했습니다.</p>
-                            </div>
-                            <div class="flex flex-col gap-2">
-                                <a href="https://platform.openai.com/account/billing" target="_blank" class="px-5 py-2 bg-brand !text-white rounded-xl text-xs font-bold shadow-lg shadow-brand/20 flex items-center gap-2 hover:brightness-110 transition-all">
-                                    OpenAI 결제 및 사용량 확인 <i data-lucide="external-link" class="w-3 h-3"></i>
-                                </a>
-                            </div>
-                        </div>
-                    `;
-                } else if (errorMessage.toLowerCase().includes('api key') || errorMessage.toLowerCase().includes('not valid')) {
-                    outputContent.innerHTML = `
-                        <div class="flex flex-col items-center justify-center py-10 text-center space-y-4">
-                            <div class="w-12 h-12 bg-red-50 dark:bg-red-900/10 rounded-full flex items-center justify-center text-red-500">
-                                <i data-lucide="key" class="w-6 h-6"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-base font-bold text-gray-900 dark:text-white">API 키 오류</h3>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-xs">${errorMessage === 'API 키를 입력해주세요. 설정 > API 키 등록' ? errorMessage : '등록된 API 키가 유효하지 않습니다. 설정 페이지에서 다시 확인해주세요.'}</p>
-                            </div>
-                            <button onclick="window.location.hash = 'settings';" class="px-5 py-2 bg-brand text-white rounded-xl text-xs font-bold shadow-lg shadow-brand/20 flex items-center gap-2">
-                                설정 페이지로 이동 <i data-lucide="arrow-right" class="w-3 h-3"></i>
-                            </button>
-                        </div>
-                    `;
-                } else if (errorMessage.toLowerCase().includes('quota') || errorMessage.toLowerCase().includes('rate limit')) {
-                    outputContent.innerHTML = `
-                        <div class="flex flex-col items-center justify-center py-10 text-center space-y-4">
-                            <div class="w-12 h-12 bg-orange-50 dark:bg-orange-900/10 rounded-full flex items-center justify-center text-orange-500">
-                                <i data-lucide="zap-off" class="w-6 h-6"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-base font-bold text-gray-900 dark:text-white">생성 할당량 초과</h3>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-xs">AI 서비스 할당량을 모두 사용했습니다. 잠시 후 시도하거나 키 상태를 확인하세요.</p>
-                            </div>
-                            <button onclick="window.location.hash = 'settings';" class="px-5 py-2 border border-brand text-brand rounded-xl text-xs font-bold hover:bg-brand hover:text-white transition-all flex items-center gap-2">
-                                API 키 설정 확인하기 <i data-lucide="key" class="w-3 h-3"></i>
-                            </button>
-                        </div>
-                    `;
-                } else {
-                    outputContent.innerHTML = `
-                        <div class="flex flex-col items-center justify-center py-10 text-center space-y-4">
-                            <div class="w-12 h-12 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center text-gray-400">
-                                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
-                            </div>
-                            <p class="text-xs text-red-500 font-medium max-w-xs">생성 실패: ${errorMessage}</p>
-                        </div>
-                    `;
-                }
-                outputContent.classList.remove('hidden');
-                lucide.createIcons();
                 showToast('생성에 실패했습니다.', 'error');
             } finally {
                 // UI: Stop Loading
@@ -578,130 +889,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 generateBtn.disabled = true;
                 generateBtn.innerHTML = '<div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> <span>생성 중...</span>';
 
-                if (outputLoader) outputLoader.classList.remove('hidden');
-                if (outputPlaceholder) outputPlaceholder.classList.add('hidden');
-                if (outputContent) outputContent.classList.add('hidden');
-                if (outputCard) outputCard.classList.remove('border-dashed'); // Make it look solid while loading
-
-                if (copyBtn) {
-                    copyBtn.style.opacity = '0';
-                    copyBtn.classList.add('pointer-events-none');
-                    copyBtn.disabled = true;
-                }
             } else {
                 generateBtn.disabled = false;
                 generateBtn.innerHTML = '<i data-lucide="wand-2" class="w-5 h-5"></i> <span>AI 콘텐츠 생성하기</span>';
                 lucide.createIcons();
 
-                if (outputLoader) outputLoader.classList.add('hidden');
             }
         }
 
     }
 
-    // 2a. Translation Action
-    const translateBtn = document.getElementById('translate-btn');
-    const translateLang = document.getElementById('translate-lang');
-    const translateSection = document.getElementById('translate-section');
-
-    if (translateBtn && translateLang) {
-        translateBtn.addEventListener('click', async () => {
-            const currentContent = outputContent.textContent;
-            const targetLang = translateLang.value;
-
-            if (!currentContent || currentContent === '아직 생성된 콘텐츠가 없습니다.') {
-                showToast('번역할 콘텐츠가 없습니다.');
-                return;
-            }
-            if (!targetLang) {
-                showToast('언어를 선택해주세요.');
-                return;
-            }
-
-            // UI: Start Loading (Partial)
-            translateBtn.disabled = true;
-            translateBtn.innerHTML = '<div class="w-3 h-3 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></div>';
-
-            // Show main loader overlay as well for better UX
-            if (outputLoader) outputLoader.classList.remove('hidden');
-
-            try {
-                const translatedText = await window.aiService.translateContent(currentContent, targetLang);
-
-                // Note: We don't necessarily overwrite the history item here, 
-                outputContent.classList.remove('opacity-50', 'animate-pulse');
-
-                // Update content with Markdown support
-                outputContent.innerHTML = marked.parse(translatedText);
-
-                showToast('번역 완료!', 2000);
-
-            } catch (error) {
-                console.error('Translation failed:', error);
-                showToast(`번역 오류: ${error.message}`, 3000);
-                outputContent.classList.remove('opacity-50', 'animate-pulse');
-            } finally {
-                // UI: Reset Button
-                translateBtn.disabled = false;
-                translateBtn.innerHTML = '<i data-lucide="languages" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">번역</span>';
-                lucide.createIcons();
-
-                if (outputLoader) outputLoader.classList.add('hidden');
-            }
-        });
-    }
-
-    function displayResult(content) {
-        if (outputContent) outputContent.textContent = content;
-
-        if (outputPlaceholder) outputPlaceholder.classList.add('hidden');
-        if (outputContent) outputContent.classList.remove('hidden');
-        if (outputContent) outputContent.classList.add('animate-fade-in');
-
-        if (outputCard) {
-            outputCard.classList.remove('border-dashed');
-            outputCard.classList.add('border-brand/20', 'bg-blue-50/10', 'dark:border-brand-light/20', 'dark:bg-blue-900/10');
-        }
-
-        if (copyBtn) {
-            copyBtn.style.opacity = '1';
-            copyBtn.classList.remove('pointer-events-none');
-            copyBtn.disabled = false;
-        }
-
-        // Show Translate Controls when content exists
-        if (translateSection) {
-            translateSection.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-1');
-        }
-    }
 
 
 
-    // 3. Copy Action
-    if (copyBtn && outputContent) {
-        copyBtn.addEventListener('click', () => {
-            const content = outputContent.innerText;
-            if (!content) return;
-
-            navigator.clipboard.writeText(content).then(() => {
-                showToast('클립보드에 복사되었습니다! 🎉');
-
-                // Visual feedback on button
-                const originalHTML = copyBtn.innerHTML;
-                copyBtn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> 복사 완료';
-                copyBtn.classList.add('text-green-600', 'dark:text-green-400');
-
-                setTimeout(() => {
-                    copyBtn.innerHTML = originalHTML;
-                    copyBtn.classList.remove('text-green-600', 'dark:text-green-400');
-                    lucide.createIcons();
-                }, 2000);
-            }).catch(err => {
-                console.error('Copy failed', err);
-                showToast('복사에 실패했습니다.');
-            });
-        });
-    }
 
     // --- Helper Functions ---
 
@@ -743,6 +943,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return `✨ 오늘의 영감: "${context}"\n\n💡 놓치면 안 되는 3가지 포인트:\n1️⃣ 첫 번째 핵심\n2️⃣ 두 번째 핵심\n3️⃣ 세 번째 핵심\n\n매일 조금씩 성장하는 나를 위해 저장해두세요! 📌\n\n.\n.\n.\n#자기계발 #동기부여 #성장 #인사이트 #꿀팁 #RepurposeAI`;
         } else if (platform === 'youtube') {
             return `[YouTube Shorts 스크립트]\n\n(0:00-0:05)\n🎥 [화면: 호기심을 자극하는 배경 영상 + 큰 텍스트 "이거 알고 계셨나요?"]\n🗣️ 내레이션: "${context}"... 혹시 이렇게 생각해본 적 있나요?\n\n(0:05-0:15)\n🎥 [화면: 핵심 내용이 3가지 포인트로 빠르게 지나감]\n🗣️ 내레이션: 사실 진짜 비밀은 여기에 있습니다. 첫째, ... 둘째, ...\n\n(0:15-0:30)\n🎥 [화면: 화자가 직접 설명하거나 인상적인 결과 화면]\n🗣️ 내레이션: 지금 바로 적용해보세요. 결과가 달라질 겁니다!\n\n(0:30-0:60)\n🎥 [화면: 구독 버튼을 가리키는 손가락]\n🗣️ 내레이션: 더 많은 꿀팁을 원하신다면 구독과 좋아요 부탁드려요! 👍`;
+        } else if (platform === 'instagram_reels') {
+            return `[Instagram Reels 스크립트]\n\n🎵 추천 오디오: 트렌딩 오디오 (비트감 있는 음악)\n\n(0:00-0:03) ⚡️ [Hook]\n화면: 텍스트 오버레이 "아직도 ${context} 모르세요?"\n동작: 카메라를 향해 의문스러운 표정 짓기\n\n(0:03-0:15) 💡 [Value]\n화면: 핵심 내용 3가지가 순차적으로 나타남\n1. 첫 번째 포인트\n2. 두 번째 포인트\n3. 세 번째 포인트\n자막: "캡션에 자세한 내용 확인! 👇"\n\n(0:15-0:20) 👉 [CTA]\n화면: 웃으며 인사 + 손짓으로 아래 가리킴\n자막: "저장하고 필요할 때 꺼내보세요!"\n\n📝 [Caption Preview]\n${context}에 대한 진실, 알고 계셨나요? 더 자세한 내용은 프로필 링크에서 확인하세요! \n.\n.\n#꿀팁 #릴스 #인사이트 #자기계발`;
         }
         return "콘텐츠 생성 오류";
     }
@@ -820,26 +1022,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 container.classList.remove('hidden');
             }
             container.innerHTML = brands.map(brand => `
-                <div class="bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border rounded-xl p-5 hover:border-brand/30 transition-all shadow-sm group relative">
-                    <div class="flex justify-between items-start mb-3">
-                        <h3 class="font-bold text-gray-900 dark:text-white text-lg">${brand.name}</h3>
-                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="editBrand('${brand.id}')" class="p-1.5 text-gray-400 hover:text-brand hover:bg-brand/5 rounded-lg transition-colors">
-                                <i data-lucide="edit-2" class="w-4 h-4"></i>
-                            </button>
-                             <button onclick="deleteBrand('${brand.id}')" class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                            </button>
+                <div class="group relative bg-white dark:bg-dark-card border border-gray-100 dark:border-white/5 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-brand/30 hover:-translate-y-1 transition-all duration-300">
+                    
+                    <!-- Decorative Gradient Blob -->
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-bl-full -mr-8 -mt-8 opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
+
+                    <div class="relative z-10">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-xl bg-brand/10 text-brand flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <i data-lucide="briefcase" class="w-6 h-6"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-gray-900 dark:text-white text-lg leading-tight group-hover:text-brand transition-colors">${brand.name}</h3>
+                                    <p class="text-xs text-brand font-medium tracking-wide uppercase mt-0.5">브랜드 프로필</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Actions (Hover Reveal) -->
+                            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
+                                <button onclick="editBrand('${brand.id}')" class="p-2 text-gray-400 hover:text-brand hover:bg-brand/10 rounded-lg transition-colors" title="수정">
+                                    <i data-lucide="edit-2" class="w-4 h-4"></i>
+                                </button>
+                                 <button onclick="deleteBrand('${brand.id}')" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="삭제">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                        <div class="flex items-start gap-2">
-                            <span class="font-medium shrink-0 text-gray-500">톤앤매너:</span>
-                            <span class="line-clamp-1">${brand.tone}</span>
-                        </div>
-                        <div class="flex items-start gap-2">
-                             <span class="font-medium shrink-0 text-gray-500">스타일:</span>
-                            <span class="line-clamp-1">${brand.style}</span>
+
+                        <div class="space-y-3 mt-4">
+                            <div class="bg-gray-50 dark:bg-white/5 rounded-xl p-3 border border-gray-100 dark:border-white/5">
+                                <div class="flex items-start gap-2 text-sm">
+                                    <i data-lucide="message-circle" class="w-4 h-4 text-gray-400 mt-0.5 shrink-0"></i>
+                                    <div>
+                                        <span class="block text-xs font-bold text-gray-500 uppercase">톤앤매너 (Tone)</span>
+                                        <span class="text-gray-700 dark:text-gray-300 font-medium">${brand.tone}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gray-50 dark:bg-white/5 rounded-xl p-3 border border-gray-100 dark:border-white/5">
+                                <div class="flex items-start gap-2 text-sm">
+                                    <i data-lucide="pen-tool" class="w-4 h-4 text-gray-400 mt-0.5 shrink-0"></i>
+                                    <div>
+                                        <span class="block text-xs font-bold text-gray-500 uppercase">작문 스타일 (Style)</span>
+                                        <span class="text-gray-700 dark:text-gray-300 font-medium line-clamp-1">${brand.style}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

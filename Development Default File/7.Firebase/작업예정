@@ -27,7 +27,19 @@
             "content": "생성된 텍스트...",
             "platform": "twitter",
             "language": "Korean",
-            "createdAt": "timestamp"
+            "createdAt": "timestamp",
+            "metadata": {
+                "viralScore": 96,
+                "viralScoreReason": "바이럴 가능성 매우 높음...",
+                "keywords": ["#유튜브시작", "#초보유튜버"],
+                "seoTitle": "첫 유튜브 시작, 이것만 알면 성공해요!",
+                "decomposed": {
+                    "hook": {"score": 38, "max": 40, "comment": "시선을 끄는 강력한 훅입니다..."},
+                    "value": {"score": 28, "max": 30, "comment": "실질적인 팁이 잘 녹아있습니다..."},
+                    "structure": {"score": 20, "max": 20, "comment": "가독성이 매우 훌륭합니다..."},
+                    "cta": {"score": 10, "max": 10, "comment": "명확한 행동 유도를 포함하고 있습니다..."}
+                }
+            }
           }
           ```
 - [ ] **CRUD 구현 (`js/database.js` 예정)**:
@@ -46,6 +58,6 @@
 ## 4. 보안 및 확장 (Functions 고려)
 **목표**: API Key 노출 방지 및 서버 로직 처리.
 
-- [ ] **Gemini API Proxy**:
-    - 현재: 클라이언트(Front)에서 직접 Gemini API 호출 (API Key 노출 위험).
-    - 개선: Cloud Functions를 만들어 API Key를 서버 환경변수에 숨기고, 프론트는 Functions를 호출하도록 구조 변경.
+- [ ] **Gemini & OpenAI API Proxy**:
+    - 현재: 클라이언트(Front)에서 직접 API 호출 (API Key 노출 위험).
+    - 개선: Firebase Cloud Functions를 개발하여 API Key를 Secret Manager 등에 안전하게 저장하고, 프론트엔드는 전용 HTTPS Callable Functions를 통해 요청하도록 보안 강화.

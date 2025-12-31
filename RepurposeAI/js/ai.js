@@ -93,7 +93,34 @@ class AIService {
         }
 
         const platformList = platforms.join(', ');
-        const systemPrompt = `You are a social media expert. Create engaging content based on the input. Optimize for platforms: [${platformList}]. Adhere to brand profiles (tone, style, keywords, forbidden words). Maintain character limits for each platform. Output Language: ${language}. Use Markdown format with '## [Platform Name]' headers.`;
+        const systemPrompt = `You are a social media expert. Create engaging content based on the input. Optimize for platforms: [${platformList}]. Adhere to brand profiles (tone, style, keywords, forbidden words). Maintain character limits for each platform. Output Language: ${language}. Use Markdown format with '## [Platform Name]' headers.
+
+---
+CRITICAL OUTPUT INSTRUCTION:
+After generating the content, you MUST append a JSON object containing analysis data. This JSON object must be separated from the content by the delimiter "---METADATA---".
+
+To calculate "viralScore", you MUST evaluate these 4 criteria step-by-step:
+1. Hook (0-40 pts): Does the first line grab attention immediately?
+2. Value (0-30 pts): Is the content highly informative or entertaining?
+3. Structure (0-20 pts): Is it readable (bullet points, spacing)?
+4. CTA (0-10 pts): Is the Call-To-Action clear?
+SUM these scores for the final "viralScore".
+
+The JSON structure:
+{
+  "viralScore": <number 0-100 (Sum of sub-scores)>,
+  "viralScoreReason": "Hook: [Score]/40, Value: [Score]/30, Structure: [Score]/20, CTA: [Score]/10. [한국어로 된 간략한 분석 코멘트]",
+  "decomposed": {
+    "hook": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
+    "value": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
+    "structure": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
+    "cta": {"score": <number>, "comment": "<string> (Brief Korean comment)"}
+  },
+  "keywords": ["<string>", "<string>", "..." (max 5 high-impact keywords)],
+  "seoTitle": "<string>"
+}
+ENSURE THE JSON IS VALID. DO NOT WRAP IN MARKDOWN CODE BLOCKS.
+`;
 
         // Add platform specific constraints for better quality
         let constraints = '';
@@ -193,10 +220,29 @@ ${brandInstruction}
 
         taskInstruction += `
 ### Final Analysis
-At the very end of the response, please add a "## Post-Generation Analysis" section:
-1. **Recommended Hashtags**: 5-10 relevant hashtags.
-2. **SEO Keywords**: High-traffic keywords used.
-3. **Virality Score**: 0-100 score + 1 sentence logic.
+At the very end of the response, you MUST append a JSON object containing analysis data. This JSON object must be separated from the content by the delimiter "---METADATA---".
+
+To calculate "viralScore", you MUST evaluate these 4 criteria step-by-step:
+1. Hook (0-40 pts): Does the first line grab attention immediately?
+2. Value (0-30 pts): Is the content highly informative or entertaining?
+3. Structure (0-20 pts): Is it readable (bullet points, spacing)?
+4. CTA (0-10 pts): Is the Call-To-Action clear?
+SUM these scores for the final "viralScore".
+
+The JSON structure:
+{
+  "viralScore": <number 0-100 (Sum of sub-scores)>,
+  "viralScoreReason": "Hook: [Score]/40, Value: [Score]/30, Structure: [Score]/20, CTA: [Score]/10. [한국어로 된 간략한 분석 코멘트]",
+  "decomposed": {
+    "hook": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
+    "value": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
+    "structure": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
+    "cta": {"score": <number>, "comment": "<string> (Brief Korean comment)"}
+  },
+  "keywords": ["<string>", "<string>", "..." (max 5 high-impact keywords)],
+  "seoTitle": "<string>"
+}
+ENSURE THE JSON IS VALID. DO NOT WRAP IN MARKDOWN CODE BLOCKS.
 
 ### Input Content for Repurposing:
 "${text}"
@@ -249,6 +295,20 @@ At the very end of the response, please add a "## Post-Generation Analysis" sect
 - **Style**: High energy, raw, authentic feel.
 - **Engagement**: Explicit instructions for stickers or "Link in bio" pointers.
 - **Trends**: If applicable, suggest a relevant trending sound or format.
+`,
+            instagram_feed: `
+#### Instagram Feed Post Rules:
+- Header: ## Instagram Feed
+- **Visual Suggestion**: Describe a compelling image or carousel idea (3-5 slides).
+- **Caption**: Impactful storytelling style. Use line breaks for readability.
+- **Hashtags**: Top 10-15 high-performance tags separated from text.
+`,
+            naver_blog: `
+#### Naver Blog Post Rules:
+- Header: ## Naver Blog
+- **Structure**: Clear Title -> Introduction -> Body (3-4 sections) -> Summary -> CTA.
+- **Tone**: Professional, trustworthy, and polite (polite Korean style).
+- **SEO**: Use bullet points and focus on high-traffic keyword placement.
 `
         };
         return instructions[platform] || '';

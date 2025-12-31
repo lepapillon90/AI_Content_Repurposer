@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('rep_user', JSON.stringify(user));
 
             setLoading(btn, false);
-            window.location.href = 'dashboard.html';
+            window.location.href = 'index.html#home';
         });
 
         // Google Login
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('rep_user', JSON.stringify(user));
 
             setLoading(btn, false);
-            window.location.href = 'dashboard.html';
+            window.location.href = 'index.html#home';
         });
     }
 

@@ -10,13 +10,15 @@ window.Components = {
     icons: {
         logo: 'sparkles',
         home: 'home',
+        create: 'plus-circle',
         dashboard: 'history',
         analytics: 'bar-chart-2',
         menu: 'menu',
         moon: 'moon',
         sun: 'sun',
         logout: 'log-out',
-        user: 'user'
+        user: 'user',
+        settings: 'settings'
     },
 
     // --- Sidebar Component ---
@@ -33,6 +35,12 @@ window.Components = {
 
         const dashIconClass = activePage === 'dashboard' ? '' : 'group-hover:text-brand dark:group-hover:text-brand-light transition-colors';
 
+        const isCreateActive = activePage === 'create'
+            ? 'bg-brand text-white shadow-sm'
+            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 group';
+
+        const createIconClass = activePage === 'create' ? '' : 'group-hover:text-brand dark:group-hover:text-brand-light transition-colors';
+
         return `
         <!-- Mobile Overlay -->
         <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden opacity-0 transition-opacity duration-300 md:hidden glassmorphism-overlay"></div>
@@ -41,7 +49,7 @@ window.Components = {
             
             <!-- Logo Area -->
             <div class="h-16 flex items-center px-6 border-b border-gray-200 dark:border-dark-border">
-                <a href="#home" class="flex items-center gap-2.5 group">
+                <a href="#create" class="flex items-center gap-2.5 group">
                     <div class="bg-brand text-white p-2 rounded-lg shadow-sm group-hover:bg-brand-dark transition-colors">
                         <i data-lucide="${this.icons.logo}" class="w-5 h-5"></i>
                     </div>
@@ -56,11 +64,15 @@ window.Components = {
             <nav class="flex-grow p-4 space-y-1 overflow-y-auto">
                 <a href="#home" class="flex items-center gap-3 px-3 py-2.5 rounded-lg ${isHomeActive} transition-all font-medium">
                     <i data-lucide="${this.icons.home}" class="w-5 h-5 ${homeIconClass}"></i>
-                    홈 (생성하기)
+                    홈
+                </a>
+                <a href="#create" class="flex items-center gap-3 px-3 py-2.5 rounded-lg ${isCreateActive} transition-all font-medium">
+                    <i data-lucide="${this.icons.create}" class="w-5 h-5 ${createIconClass}"></i>
+                    생성하기
                 </a>
                 <a href="#dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-lg ${isDashActive} transition-all font-medium">
                     <i data-lucide="${this.icons.dashboard}" class="w-5 h-5 ${dashIconClass}"></i>
-                    대시보드
+                    생성기록
                 </a>
                 <a href="#brands" class="flex items-center gap-3 px-3 py-2.5 rounded-lg ${activePage === 'brands' ? 'bg-brand text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 group'} transition-all font-medium">
                     <i data-lucide="briefcase" class="w-5 h-5 ${activePage === 'brands' ? '' : 'group-hover:text-brand dark:group-hover:text-brand-light transition-colors'}"></i>
@@ -82,7 +94,8 @@ window.Components = {
             </nav>
 
             <!-- Sidebar Footer -->
-            <div class="p-4 border-t border-gray-200 dark:border-dark-border">
+            <div class="p-4 border-t border-gray-200 dark:border-dark-border space-y-3">
+                <!-- User Profile Section -->
                 <div class="flex items-center gap-3 px-3 py-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-dark-border">
                     <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-brand dark:text-brand-light text-xs font-bold">
                         AI
@@ -91,6 +104,19 @@ window.Components = {
                         <p id="sidebar-user-name" class="text-sm font-medium truncate text-gray-700 dark:text-gray-200">Guest</p>
                         <p class="text-[10px] text-gray-500 truncate">Free Plan</p>
                     </div>
+                </div>
+
+                <!-- Auth Buttons Section (Now at bottom) -->
+                <div id="auth-container" class="flex flex-col gap-2">
+                    <a href="login.html" id="login-btn" class="hidden w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-brand text-white hover:bg-brand-dark transition-all text-sm font-bold shadow-md shadow-brand/20">
+                        <i data-lucide="log-in" class="w-4 h-4"></i>
+                        로그인
+                    </a>
+
+                    <button id="logout-btn" class="hidden w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all text-sm font-bold border border-red-100 dark:border-red-900/20">
+                        <i data-lucide="${this.icons.logout}" class="w-4 h-4"></i>
+                        로그아웃
+                    </button>
                 </div>
             </div>
         </aside>
@@ -121,17 +147,6 @@ window.Components = {
                          <i data-lucide="${this.icons.moon}" class="w-5 h-5 hidden dark:block"></i>
                          <i data-lucide="${this.icons.sun}" class="w-5 h-5 block dark:hidden"></i>
                     </button>
-
-                    <!-- Auth Buttons -->
-                    <div id="auth-container" class="flex items-center">
-                        <a href="login.html" id="login-btn" class="hidden text-sm font-medium text-gray-600 hover:text-brand dark:text-gray-300 dark:hover:text-white transition-colors">
-                            로그인
-                        </a>
-
-                        <button id="logout-btn" class="hidden text-sm font-medium text-red-500 hover:text-red-600 transition-colors px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 ml-2">
-                             로그아웃
-                        </button>
-                    </div>
                 </div>
             </div>
         </header>
@@ -170,7 +185,11 @@ window.Components = {
         // Use hash for routing (SPA), default to 'home'
         const hash = window.location.hash.substring(1) || 'home';
         let activePage = 'home';
+        if (hash === 'home') activePage = 'home';
         if (hash === 'dashboard') activePage = 'dashboard';
+        if (hash === 'create') activePage = 'create';
+        if (hash === 'brands') activePage = 'brands';
+        if (hash === 'settings') activePage = 'settings';
 
         // Inject Sidebar
         const sidebarContainer = document.getElementById('layout-sidebar');

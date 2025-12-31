@@ -5,10 +5,10 @@
 ---
 
 ## 🏗️ 1단계: 린 프로토타입 (현재)
-*   **코어**: HTML5, Vanilla JavaScript (ES6+).
-*   **스타일링**: CDN을 통한 Tailwind CSS (스크립트 태그).
-*   **배포**: 정적 호스팅 (GitHub Pages / Netlify Drop).
-*   **장점**: 빌드 시간 없음, 즉시 배포, 이해하기 쉬움.
+*   **코어**: HTML5, Vanilla JavaScript (ES6+), LocalStorage.
+*   **AI**: Gemini Pro & OpenAI SDK 통합.
+*   **스타일링**: Tailwind CSS (CDN/Custom utility).
+*   **장점**: 즉각적인 피드백 루프, 빌드 도구 없는 빠른 이터레이션.
 *   **단점**: 컴포넌트 재사용 불가, 상태 복잡성 관리 어려움, 제한적인 API 보안.
 
 ---
@@ -48,7 +48,7 @@
 | 구성 요소 | MVP (1단계) | 성장 (2단계) | 확장 (3단계) |
 |-----------|---------------|------------------|-----------------|
 | **프레임워크** | Vanilla JS | Next.js (App Router) | Next.js + Turborepo |
-| **스타일링** | Tailwind (CDN) | Tailwind (PostCSS) | Tailwind + Shadcn/UI |
-| **백엔드** | Mock / Browser | Next.js API Routes | Node.js / Supabase |
-| **데이터베이스** | LocalStorage | LocalStorage | PostgreSQL / Redis |
-| **AI 운영** | Simulation | Direct API | LangChain / RAG |
+| **스타일링** | Tailwind (CDN/Utility) | Tailwind (PostCSS) | Tailwind + Shadcn/UI |
+| **백엔드** | AI Direct SDK | Next.js API Routes | Node.js / Serverless |
+| **데이터베이스** | LocalStorage | IndexedDB / Sync | PostgreSQL / Firebase |
+| **AI 운영** | Multi-Model SDK | Edge Runtime | RAG / Custom Fine-tuning |
