@@ -390,84 +390,187 @@
 
             <!-- Settings View -->
             <div id="view-settings" class="view-section hidden">
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="mt-4 p-4 bg-gray-50 dark:bg-dark-element rounded-xl border border-gray-100 dark:border-dark-border">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center gap-2">
-                                            <div id="api-status-indicator" class="w-2 h-2 rounded-full bg-gray-300"></div>
-                                            <span id="api-status-text" class="text-[10px] text-gray-500 font-medium uppercase tracking-wider">상태 미확인</span>
+                <div class="max-w-4xl mx-auto space-y-8 animate-fade-in-up">
+                    
+                    <!-- Header -->
+                    <div class="text-center mb-10">
+                        <div class="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4 shadowed-icon">
+                            <i data-lucide="settings-2" class="w-8 h-8 text-gray-600 dark:text-gray-300"></i>
+                        </div>
+                        <h2 class="text-3xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">환경 설정</h2>
+                        <p class="text-gray-500 dark:text-gray-400">AI 모델 및 앱 사용 환경을 설정하세요.</p>
+                    </div>
+
+                    <!-- Main Settings Grid -->
+                    <div class="bg-white dark:bg-dark-card rounded-3xl shadow-xl border border-gray-100 dark:border-dark-border p-8 space-y-8">
+                        
+                        <!-- AI Service Section -->
+                        <div class="space-y-6">
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <i data-lucide="cpu" class="w-5 h-5 text-brand"></i>
+                                AI 모델 선택
+                            </h3>
+
+                            <!-- Model Selection Grid -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Gemini Card -->
+                                <label class="relative cursor-pointer group">
+                                    <input type="radio" name="ai-provider" value="gemini" class="peer sr-only" checked>
+                                    <div class="p-5 rounded-2xl border-2 border-gray-100 dark:border-dark-border hover:border-blue-300 peer-checked:border-blue-500 peer-checked:bg-blue-50/30 dark:peer-checked:bg-blue-900/10 transition-all h-full shadow-sm hover:shadow-md peer-checked:shadow-none">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/20 flex items-center justify-center">
+                                                <!-- Google Gemini Logo (Star) -->
+                                                <svg viewBox="0 0 24 24" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg">
+                                                    <defs>
+                                                        <linearGradient id="gemini-gradient-v2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                            <stop offset="0%" stop-color="#4E87F3"/>
+                                                            <stop offset="50%" stop-color="#9A69D2"/>
+                                                            <stop offset="100%" stop-color="#EF5C5C"/>
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <path d="M12 0C12 6.627 6.627 12 0 12C6.627 12 12 17.373 12 24C12 17.373 17.373 12 24 12C17.373 12 12 6.627 12 0Z" fill="url(#gemini-gradient-v2)"/>
+                                                </svg>
+                                            </div>
+                                            <!-- Custom Radio with Blue Check -->
+                                            <div class="w-5 h-5 rounded-full border-2 border-gray-300 peer-checked:border-blue-500 peer-checked:bg-blue-500 transition-colors relative flex items-center justify-center">
+                                                <div class="w-2 h-2 bg-white rounded-full opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                                            </div>
                                         </div>
-                                        <button id="validate-api-key-btn" class="text-xs font-bold text-brand hover:text-brand-dark transition-colors flex items-center gap-1">
-                                            <i data-lucide="shield-check" class="w-3 h-3"></i>
-                                            키 유효성 검사
-                                        </button>
+                                        <h4 class="font-bold text-gray-900 dark:text-white mb-1 group-hover:text-blue-600 peer-checked:text-blue-700 dark:peer-checked:text-blue-400 transition-colors">Google Gemini</h4>
+                                        <span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-full mb-2">Fast & Smart</span>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                                            구글의 최신 고성능 모델. 빠르고 정확한 한국어 처리에 강점이 있습니다. (무료 사용량 제공)
+                                        </p>
                                     </div>
-                                    <p id="api-validation-msg" class="text-[10px] text-gray-400 mt-2 hidden">API 키를 확인 중입니다...</p>
-                                </div>
+                                </label>
+
+                                <!-- OpenAI Card -->
+                                <label class="relative cursor-pointer group">
+                                    <input type="radio" name="ai-provider" value="openai" class="peer sr-only">
+                                    <div class="p-5 rounded-2xl border-2 border-gray-100 dark:border-dark-border hover:border-gray-400 peer-checked:border-gray-900 dark:peer-checked:border-white peer-checked:bg-gray-50/50 dark:peer-checked:bg-white/5 transition-all h-full shadow-sm hover:shadow-md peer-checked:shadow-none">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <div class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-900 dark:text-white">
+                                                <!-- OpenAI Logo (Image) -->
+                                                <img src="assets/openai_logo.png" alt="OpenAI Logo" class="w-6 h-6 object-contain dark:invert opacity-90">
+                                            </div>
+                                            <!-- Custom Radio with Black Check -->
+                                            <div class="w-5 h-5 rounded-full border-2 border-gray-300 peer-checked:border-gray-900 dark:peer-checked:border-white peer-checked:bg-gray-900 dark:peer-checked:bg-white transition-colors relative flex items-center justify-center">
+                                                <div class="w-2 h-2 bg-white dark:bg-black rounded-full opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                                            </div>
+                                        </div>
+                                        <h4 class="font-bold text-gray-900 dark:text-white mb-1 group-hover:text-gray-700 peer-checked:text-black dark:peer-checked:text-white transition-colors">OpenAI GPT-4o</h4>
+                                        <span class="inline-block px-2 py-0.5 bg-gray-100 text-gray-700 text-[10px] font-bold rounded-full mb-2">Powerful</span>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                                            가장 강력한 추론 능력. 복잡한 뉘앙스 파악과 창의적인 글쓰기에 탁월합니다.
+                                        </p>
+                                    </div>
+                                </label>
                             </div>
 
-                            <!-- OpenAI Settings -->
-                            <div id="openai-settings" class="provider-settings space-y-4 hidden">
-                                <div class="flex items-center justify-between mb-2">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        OpenAI API Key
-                                    </label>
-                                    <div class="group relative">
-                                        <i data-lucide="help-circle" class="w-3.5 h-3.5 text-gray-400 cursor-help"></i>
-                                        <div class="absolute bottom-full right-0 mb-2 w-48 p-2 bg-gray-900 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl">
-                                            보안 팁: 키를 브라우저 외부에 복사하거나 타인과 공유하지 마세요.
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="relative">
-                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <i data-lucide="key" class="w-4 h-4 text-gray-400"></i>
-                                    </div>
-                                    <input type="password" id="openai-api-key" class="w-full pl-10 pr-32 py-3 bg-gray-50 dark:bg-dark-element border border-gray-200 dark:border-dark-border rounded-xl focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all placeholder-gray-400 dark:placeholder-gray-600 text-sm" placeholder="sk-...">
-                                    <div class="absolute inset-y-0 right-2 flex items-center gap-1">
-                                        <button id="delete-openai-key-btn" class="text-gray-400 hover:text-red-500 text-[10px] font-medium px-2 py-1.5 rounded-lg transition-colors">
-                                            삭제
-                                        </button>
-                                        <button id="save-openai-key-btn" class="bg-brand hover:bg-brand-dark text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
-                                            저장
-                                        </button>
-                                    </div>
-                                </div>
-                                <p class="text-[10px] text-red-500/80 font-medium">
-                                    ⚠️ 절대 공유하지 마세요. 이 키는 당신의 OpenAI 계정 비용에 직접 연결됩니다.
-                                </p>
-                                <div class="mt-4 p-4 bg-gray-50 dark:bg-dark-element rounded-xl border border-gray-100 dark:border-dark-border">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center gap-2">
-                                            <div id="openai-status-indicator" class="w-2 h-2 rounded-full bg-gray-300"></div>
-                                            <span id="openai-status-text" class="text-[10px] text-gray-500 font-medium uppercase tracking-wider">상태 미확인</span>
-                                        </div>
-                                        <button id="validate-openai-key-btn" class="text-xs font-bold text-brand hover:text-brand-dark transition-colors flex items-center gap-1">
-                                            <i data-lucide="shield-check" class="w-3 h-3"></i>
-                                            키 유효성 검사
-                                        </button>
-                                    </div>
-                                    <div id="openai-error-container" class="mt-3 hidden">
-                                        <p id="openai-error-msg" class="text-[10px] text-red-500 mb-1"></p>
-                                        <a id="openai-dashboard-link" href="#" target="_blank" class="text-[10px] text-brand hover:underline font-bold flex items-center gap-1">
-                                            OpenAI 대시보드에서 해결하기 <i data-lucide="external-link" class="w-3 h-3"></i>
+                            <!-- Settings Detail Section (Dynamic) -->
+                            <div id="provider-settings-container" class="mt-4 p-1">
+                                
+                                <!-- Gemini Settings -->
+                                <div id="gemini-settings" class="provider-settings space-y-4">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            Gemini API Key
+                                            <span class="ml-2 text-[10px] text-brand bg-brand/10 px-2 py-0.5 rounded-full">Recommended</span>
+                                        </label>
+                                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-brand hover:underline flex items-center gap-1 font-medium">
+                                            키 발급받기 <i data-lucide="external-link" class="w-3 h-3"></i>
                                         </a>
                                     </div>
-                                    <p id="openai-validation-msg" class="text-[10px] text-gray-400 mt-2 hidden">API 키를 확인 중입니다...</p>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <i data-lucide="key" class="w-4 h-4 text-gray-400"></i>
+                                        </div>
+                                        <input type="password" id="gemini-api-key" class="w-full pl-10 pr-32 py-3 bg-gray-50 dark:bg-dark-element border border-gray-200 dark:border-dark-border rounded-xl focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all placeholder-gray-400 dark:placeholder-gray-600 text-sm" placeholder="AIzaSy...">
+                                        <div class="absolute inset-y-0 right-2 flex items-center gap-1">
+                                            <button id="save-gemini-key-btn" class="bg-brand hover:bg-brand-dark text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors shadow-sm">
+                                                저장
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 p-4 bg-gray-50 dark:bg-dark-element rounded-xl border border-gray-100 dark:border-dark-border">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-2">
+                                                <div id="api-status-indicator" class="w-2 h-2 rounded-full bg-gray-300"></div>
+                                                <span id="api-status-text" class="text-[10px] text-gray-500 font-medium uppercase tracking-wider">상태 미확인</span>
+                                            </div>
+                                            <button id="validate-api-key-btn" class="text-xs font-bold text-brand hover:text-brand-dark transition-colors flex items-center gap-1">
+                                                <i data-lucide="shield-check" class="w-3 h-3"></i>
+                                                키 유효성 검사
+                                            </button>
+                                        </div>
+                                        <p id="api-validation-msg" class="text-[10px] text-gray-400 mt-2 hidden">API 키를 확인 중입니다...</p>
+                                    </div>
+                                </div>
+
+                                <!-- OpenAI Settings -->
+                                <div id="openai-settings" class="provider-settings space-y-4 hidden">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            OpenAI API Key
+                                        </label>
+                                        <div class="group relative">
+                                            <i data-lucide="help-circle" class="w-3.5 h-3.5 text-gray-400 cursor-help"></i>
+                                            <div class="absolute bottom-full right-0 mb-2 w-48 p-2 bg-gray-900 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl">
+                                                보안 팁: 키를 브라우저 외부에 복사하거나 타인과 공유하지 마세요.
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <i data-lucide="key" class="w-4 h-4 text-gray-400"></i>
+                                        </div>
+                                        <input type="password" id="openai-api-key" class="w-full pl-10 pr-32 py-3 bg-gray-50 dark:bg-dark-element border border-gray-200 dark:border-dark-border rounded-xl focus:ring-2 focus:ring-brand focus:border-transparent outline-none transition-all placeholder-gray-400 dark:placeholder-gray-600 text-sm" placeholder="sk-...">
+                                        <div class="absolute inset-y-0 right-2 flex items-center gap-1">
+                                            <button id="delete-openai-key-btn" class="text-gray-400 hover:text-red-500 text-[10px] font-medium px-2 py-1.5 rounded-lg transition-colors">
+                                                삭제
+                                            </button>
+                                            <button id="save-openai-key-btn" class="bg-brand hover:bg-brand-dark text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
+                                                저장
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p class="text-[10px] text-red-500/80 font-medium">
+                                        ⚠️ 절대 공유하지 마세요. 이 키는 당신의 OpenAI 계정 비용에 직접 연결됩니다.
+                                    </p>
+                                    <div class="mt-4 p-4 bg-gray-50 dark:bg-dark-element rounded-xl border border-gray-100 dark:border-dark-border">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-2">
+                                                <div id="openai-status-indicator" class="w-2 h-2 rounded-full bg-gray-300"></div>
+                                                <span id="openai-status-text" class="text-[10px] text-gray-500 font-medium uppercase tracking-wider">상태 미확인</span>
+                                            </div>
+                                            <button id="validate-openai-key-btn" class="text-xs font-bold text-brand hover:text-brand-dark transition-colors flex items-center gap-1">
+                                                <i data-lucide="shield-check" class="w-3 h-3"></i>
+                                                키 유효성 검사
+                                            </button>
+                                        </div>
+                                        <div id="openai-error-container" class="mt-3 hidden">
+                                            <p id="openai-error-msg" class="text-[10px] text-red-500 mb-1"></p>
+                                            <a id="openai-dashboard-link" href="#" target="_blank" class="text-[10px] text-brand hover:underline font-bold flex items-center gap-1">
+                                                OpenAI 대시보드에서 해결하기 <i data-lucide="external-link" class="w-3 h-3"></i>
+                                            </a>
+                                        </div>
+                                        <p id="openai-validation-msg" class="text-[10px] text-gray-400 mt-2 hidden">API 키를 확인 중입니다...</p>
+                                    </div>
                                 </div>
                             </div>
 
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-4">
-                                * 키는 브라우저 내부(Local Storage)에만 안전하게 저장됩니다.<br>
+                                * API 키는 브라우저 내부(Local Storage)에 암호화되어 안전하게 저장됩니다.<br>
                                 * Gemini 키를 입력하지 않으면 기본 제공 키가 사용됩니다.
                             </p>
                         </div>
+                        
+                        <div class="border-t border-gray-100 dark:border-dark-border my-6"></div>
 
-                        <!-- Reset Data Section -->
-                        <div class="space-y-4 pt-4">
-                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+                        <!-- Data Management Section -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white pb-2 flex items-center gap-2">
+                                <i data-lucide="database" class="w-5 h-5 text-brand"></i>
                                 데이터 관리
                             </h3>
                             <button id="clear-history-btn" class="w-full flex items-center justify-center gap-2 px-4 py-3 border border-red-200 text-red-500 hover:bg-red-50 hover:text-red-700 dark:border-red-900/30 dark:hover:bg-red-900/10 rounded-xl transition-colors font-medium">
@@ -480,7 +583,6 @@
                                 <span>튜토리얼 다시 보기 (온보딩 리셋)</span>
                             </button>
                         </div>
-
                     </div>
                 </div>
             </div>
