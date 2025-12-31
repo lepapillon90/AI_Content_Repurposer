@@ -24,6 +24,39 @@
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css">
+    
+    <script>
+        // Prevent FOUC: Hide layout immediately
+        document.documentElement.classList.add('app-loading');
+
+        // Check onboarding status
+        if (!localStorage.getItem('rep_onboarding_seen')) {
+            document.documentElement.classList.add('onboarding-pending');
+        }
+    </script>
+    <style>
+        /* Initial Loading State & Onboarding State */
+        .app-loading #layout-sidebar,
+        .app-loading #app-main-layout,
+        .onboarding-pending #layout-sidebar,
+        .onboarding-pending #app-main-layout {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease-out;
+        }
+
+        /* Show content when loaded (override) */
+        html:not(.app-loading):not(.onboarding-pending) #layout-sidebar,
+        html:not(.app-loading):not(.onboarding-pending) #app-main-layout {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Override visibility for the modal so it appears even if parent is hidden */
+        .onboarding-pending #onboarding-modal {
+            visibility: visible;
+        }
+    </style>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="manifest" href="manifest.json">
 </head>
@@ -34,7 +67,7 @@
     <div id="layout-sidebar"></div>
 
     <!-- Main Content Wrapper -->
-    <div class="md:ml-64 min-h-screen flex flex-col">
+    <div id="app-main-layout" class="md:ml-64 min-h-screen flex flex-col">
         <!-- Header Placeholder -->
         <div id="layout-header"></div>
 
@@ -606,6 +639,8 @@
     <script src="js/theme.js"></script>
     <script src="js/brand.js"></script>
     <script src="js/ai.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/history.js"></script>
     <script src="js/app.js"></script>
     <script>
         lucide.createIcons();

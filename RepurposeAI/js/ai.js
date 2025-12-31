@@ -221,25 +221,34 @@ At the very end of the response, please add a "## Post-Generation Analysis" sect
 - **Tone**: Thought-leadership, professional but conversational.
 `,
             instagram: `
-#### Instagram & Reels Rules:
-- Header: ## Instagram Reels & Caption
-- **Limit**: Caption under 1000 characters.
-- **Visual Script**: 3-5 scenes with [Visual] and [Audio] cues.
-- **Goal**: Shareable value and high-engagement CTA.
+#### Instagram Reels & Caption Rules:
+- Header: ## Instagram Reels Script
+- **Format**: USE A TABLE for the script with columns: [Scene, Time, Visual, Audio, Text Overlay].
+- **Visuals**: Be highly descriptive (e.g., "Fast cut to...").
+- **Audio**: Specify trending audio feel or voiceover tone.
+- **Caption**: Under 1000 characters. First line must be a hook. Use line breaks.
+- **Hashtags**: 10-15 relevant hashtags at the bottom.
 `,
             youtube: `
-#### YouTube Shorts Rules:
+#### YouTube Shorts Script Rules:
 - Header: ## YouTube Shorts Script
-- **Limit**: Max 60 seconds of content (approx 160 words).
-- **Structure**: 0-5s Hook, 5-50s Mid-value, 50-60s CTA.
-- **Retention**: Describe fast-paced visual cuts for every 2-3 seconds of audio.
+- **3 Hook Options**: Provide 3 different strong hook variations at the start.
+- **Format**: USE A STRICT TABLE format:
+  | Time | Visual (Detailed) | Audio (Narration) | Text Overlay |
+  |------|-------------------|-------------------|--------------|
+  | 0-3s | [Visual Description] | [Hook Line] | [Big Text] |
+- **Pacing**: Fast cuts every 2-3 seconds.
+- **Retention**: Visuals must change frequently to maintain attention.
+- **CTA**: Clear call-to-action in the last 5 seconds.
 `,
             tiktok: `
 #### TikTok Script Rules:
 - Header: ## TikTok Script
-- **Limit**: 15-45 seconds is optimal.
-- **Style**: High energy, immediate hook (0-2 seconds).
-- **Engagement**: Use "Text on Screen" prompts for every scene.
+- **Format**: USE A TABLE format: [Time, Visual, Audio, Text].
+- **Hook**: First 3 seconds are critical. Start with a visual disruption or strong statement.
+- **Style**: High energy, raw, authentic feel.
+- **Engagement**: Explicit instructions for stickers or "Link in bio" pointers.
+- **Trends**: If applicable, suggest a relevant trending sound or format.
 `
         };
         return instructions[platform] || '';

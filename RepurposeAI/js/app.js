@@ -747,288 +747,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return "콘텐츠 생성 오류";
     }
 
-    // --- Settings View Logic ---
-    function initSettings() {
-        // Provider Selection Logic
-        const providerRadios = document.querySelectorAll('input[name="ai-provider"]');
-        const geminiSettings = document.getElementById('gemini-settings');
-        const openaiSettings = document.getElementById('openai-settings');
 
-        const savedProvider = localStorage.getItem('rep_ai_provider') || 'gemini';
-        providerRadios.forEach(radio => {
-            if (radio.value === savedProvider) radio.checked = true;
-            radio.addEventListener('change', (e) => {
-                const selected = e.target.value;
-                window.aiService.setProvider(selected);
-                toggleProviderUI(selected);
-                showToast(`${selected.charAt(0).toUpperCase() + selected.slice(1)} 공급자가 선택되었습니다.`, 'info');
-            });
-        });
 
-        function toggleProviderUI(provider) {
-            if (provider === 'gemini') {
-                geminiSettings.classList.remove('hidden');
-                openaiSettings.classList.add('hidden');
-            } else {
-                geminiSettings.classList.add('hidden');
-                openaiSettings.classList.remove('hidden');
-            }
-        }
-        toggleProviderUI(savedProvider);
 
-        // --- Gemini Settings ---
-        const settingsApiKeyInput = document.getElementById('settings-api-key');
-        const saveApiKeyBtn = document.getElementById('save-api-key-btn');
-        const validateBtn = document.getElementById('validate-api-key-btn');
-        const apiStatusIndicator = document.getElementById('api-status-indicator');
-        const apiStatusText = document.getElementById('api-status-text');
-        const apiValidationMsg = document.getElementById('api-validation-msg');
 
-        if (settingsApiKeyInput && saveApiKeyBtn) {
-            const savedKey = localStorage.getItem('rep_api_key');
-            if (savedKey) settingsApiKeyInput.value = savedKey;
 
-            const checkKey = async () => {
-                const currentKey = settingsApiKeyInput.value.trim();
-                if (!currentKey) {
-                    apiStatusIndicator.className = 'w-2 h-2 rounded-full bg-gray-300';
-                    apiStatusText.textContent = '상태 미확인';
-                    return;
-                }
-                if (apiValidationMsg) apiValidationMsg.classList.remove('hidden');
-                validateBtn.disabled = true;
-                const originalKey = window.aiService.apiKey;
-                window.aiService.setApiKey(currentKey);
-                const isValid = await window.aiService.validateApiKey();
-                if (isValid) {
-                    apiStatusIndicator.className = 'w-2 h-2 rounded-full bg-green-500 shadow-sm shadow-green-500/50';
-                    apiStatusText.textContent = '유효함';
-                    apiStatusText.className = 'text-[10px] text-green-500 font-bold uppercase tracking-wider';
-                    if (apiValidationMsg) apiValidationMsg.textContent = '✅ API 키를 성공적으로 확인했습니다.';
-                } else {
-                    apiStatusIndicator.className = 'w-2 h-2 rounded-full bg-red-500 shadow-sm shadow-red-500/50';
-                    apiStatusText.textContent = '무효함';
-                    apiStatusText.className = 'text-[10px] text-red-500 font-bold uppercase tracking-wider';
-                    if (apiValidationMsg) apiValidationMsg.textContent = '❌ 유효하지 않은 API 키입니다. 다시 확인해주세요.';
-                }
-                window.aiService.setApiKey(originalKey);
-                validateBtn.disabled = false;
-                setTimeout(() => { if (apiValidationMsg) apiValidationMsg.classList.add('hidden'); }, 3000);
-            };
 
-            validateBtn.onclick = checkKey;
-
-            const deleteBtn = document.getElementById('delete-api-key-btn');
-            if (deleteBtn) {
-                deleteBtn.onclick = async () => {
-                    const confirmed = await showAppConfirm('API 키 삭제', 'Gemini API 키를 삭제하시겠습니까?');
-                    if (confirmed) {
-                        localStorage.removeItem('rep_api_key');
-                        window.aiService.setApiKey(null);
-                        settingsApiKeyInput.value = '';
-                        apiStatusIndicator.className = 'w-2 h-2 rounded-full bg-gray-300';
-                        apiStatusText.textContent = '상태 미확인';
-                        showToast('Gemini API 키가 삭제되었습니다.', 'info');
-                    }
-                };
-            }
-
-            saveApiKeyBtn.onclick = () => {
-                const newKey = settingsApiKeyInput.value.trim();
-                if (newKey) {
-                    localStorage.setItem('rep_api_key', newKey);
-                    window.aiService.setApiKey(newKey);
-                    showToast('Gemini API 키가 저장되었습니다.', 'success');
-                    checkKey();
-                } else {
-                    showToast('API 키를 입력해주세요.');
-                }
-            };
-        }
-
-        // --- OpenAI Settings ---
-        const openaiKeyInput = document.getElementById('openai-api-key');
-        const saveOpenaiBtn = document.getElementById('save-openai-key-btn');
-        const validateOpenaiBtn = document.getElementById('validate-openai-key-btn');
-        const openaiStatusIndicator = document.getElementById('openai-status-indicator');
-        const openaiStatusText = document.getElementById('openai-status-text');
-        const openaiValidationMsg = document.getElementById('openai-validation-msg');
-
-        if (openaiKeyInput && saveOpenaiBtn) {
-            const savedOpenaiKey = localStorage.getItem('rep_openai_key');
-            if (savedOpenaiKey) openaiKeyInput.value = savedOpenaiKey;
-
-            const checkOpenaiKey = async () => {
-                const currentKey = openaiKeyInput.value.trim();
-                const errorContainer = document.getElementById('openai-error-container');
-                const errorMsg = document.getElementById('openai-error-msg');
-                const dashboardLink = document.getElementById('openai-dashboard-link');
-
-                if (!currentKey) {
-                    openaiStatusIndicator.className = 'w-2 h-2 rounded-full bg-gray-300';
-                    openaiStatusText.textContent = '상태 미확인';
-                    if (errorContainer) errorContainer.classList.add('hidden');
-                    return;
-                }
-
-                if (openaiValidationMsg) openaiValidationMsg.classList.remove('hidden');
-                validateOpenaiBtn.disabled = true;
-                const originalKey = window.aiService.openaiKey;
-                window.aiService.setOpenAIKey(currentKey);
-
-                try {
-                    const isValid = await window.aiService.validateOpenAIKey();
-                    if (isValid) {
-                        openaiStatusIndicator.className = 'w-2 h-2 rounded-full bg-green-500 shadow-sm shadow-green-500/50';
-                        openaiStatusText.textContent = '유효함';
-                        openaiStatusText.className = 'text-[10px] text-green-500 font-bold uppercase tracking-wider';
-                        if (openaiValidationMsg) openaiValidationMsg.textContent = '✅ OpenAI 키를 성공적으로 확인했습니다.';
-                        if (errorContainer) errorContainer.classList.add('hidden');
-                    } else {
-                        throw new Error('OPENAI_INVALID_KEY');
-                    }
-                } catch (error) {
-                    openaiStatusIndicator.className = 'w-2 h-2 rounded-full bg-red-500 shadow-sm shadow-red-500/50';
-                    openaiStatusText.textContent = '무효함';
-                    openaiStatusText.className = 'text-[10px] text-red-500 font-bold uppercase tracking-wider';
-
-                    if (errorContainer && errorMsg && dashboardLink) {
-                        errorContainer.classList.remove('hidden');
-                        if (error.message === 'OPENAI_QUOTA_EXCEEDED') {
-                            errorMsg.textContent = '❌ 할당량 초과: 계정 잔액이나 할당량을 확인해주세요.';
-                            dashboardLink.href = 'https://platform.openai.com/account/billing';
-                        } else {
-                            errorMsg.textContent = '❌ 유효하지 않은 API 키입니다.';
-                            dashboardLink.href = 'https://platform.openai.com/api-keys';
-                        }
-                    }
-                    if (openaiValidationMsg) openaiValidationMsg.textContent = '❌ 키 확인 중 오류가 발생했습니다.';
-                }
-
-                window.aiService.setOpenAIKey(originalKey);
-                validateOpenaiBtn.disabled = false;
-                setTimeout(() => { if (openaiValidationMsg) openaiValidationMsg.classList.add('hidden'); }, 3000);
-            };
-
-            validateOpenaiBtn.onclick = checkOpenaiKey;
-
-            const deleteOpenaiBtn = document.getElementById('delete-openai-key-btn');
-            if (deleteOpenaiBtn) {
-                deleteOpenaiBtn.onclick = async () => {
-                    const confirmed = await showAppConfirm('API 키 삭제', 'OpenAI API 키를 삭제하시겠습니까?');
-                    if (confirmed) {
-                        localStorage.removeItem('rep_openai_key');
-                        window.aiService.setOpenAIKey(null);
-                        openaiKeyInput.value = '';
-                        openaiStatusIndicator.className = 'w-2 h-2 rounded-full bg-gray-300';
-                        openaiStatusText.textContent = '상태 미확인';
-                        document.getElementById('openai-error-container')?.classList.add('hidden');
-                        showToast('OpenAI 키가 삭제되었습니다.', 'info');
-                    }
-                };
-            }
-
-            saveOpenaiBtn.onclick = () => {
-                const newKey = openaiKeyInput.value.trim();
-                if (newKey) {
-                    localStorage.setItem('rep_openai_key', newKey);
-                    window.aiService.setOpenAIKey(newKey);
-                    showToast('OpenAI 키가 저장되었습니다.', 'success');
-                    checkOpenaiKey();
-                } else {
-                    showToast('API 키를 입력해주세요.');
-                }
-            };
-        }
-
-        const clearHistoryBtn = document.getElementById('clear-history-btn');
-
-        if (clearHistoryBtn) {
-            clearHistoryBtn.addEventListener('click', async () => {
-                const confirmed = await showAppConfirm('전체 기록 삭제', '모든 생성 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.');
-                if (confirmed) {
-                    localStorage.removeItem('rep_history');
-                    showToast('모든 기록이 삭제되었습니다.');
-                    // Refresh view if on dashboard
-                    if (window.location.hash === '#dashboard') {
-                        loadHistory();
-                    }
-                }
-            });
-        }
-
-        // Reset Onboarding Button
-        const resetOnboardingBtn = document.getElementById('reset-onboarding-btn');
-        if (resetOnboardingBtn) {
-            resetOnboardingBtn.addEventListener('click', () => {
-                localStorage.removeItem('rep_onboarding_seen');
-                // Trigger modal show logic immediately
-                const onboardingModal = document.getElementById('onboarding-modal');
-                if (onboardingModal) {
-                    onboardingModal.classList.remove('hidden');
-                    setTimeout(() => {
-                        onboardingModal.classList.remove('opacity-0');
-                        const content = onboardingModal.querySelector('#onboarding-content');
-                        if (content) content.classList.remove('scale-95');
-                    }, 100);
-                }
-            });
-        }
-    }
-
-    // --- Onboarding Logic (Moved to Main Scope) ---
-    // Check if user has seen onboarding
-    // Called once on load (handled by logic below)
-
-    // Call initSettings on load and hash change to ensure elements are bound
-    const savedGlobalKey = localStorage.getItem('rep_api_key');
-    if (savedGlobalKey) {
-        window.aiService.setApiKey(savedGlobalKey);
-    }
-    const savedOpenaiKey = localStorage.getItem('rep_openai_key');
-    if (savedOpenaiKey) {
-        window.aiService.setOpenAIKey(savedOpenaiKey);
-    }
-    const savedProvider = localStorage.getItem('rep_ai_provider');
-    if (savedProvider) {
-        window.aiService.setProvider(savedProvider);
-    }
-    initSettings();
-
-    // Initial Onboarding Check (Run once)
-    const onboardingModal = document.getElementById('onboarding-modal');
-    const closeOnboardingBtn = document.getElementById('close-onboarding');
-    const hasSeenOnboarding = localStorage.getItem('rep_onboarding_seen');
-
-    if (!hasSeenOnboarding && onboardingModal) {
-        // Show modal with animation
-        onboardingModal.classList.remove('hidden');
-        // Slight delay for fade-in effect
-        setTimeout(() => {
-            onboardingModal.classList.remove('opacity-0');
-            const content = onboardingModal.querySelector('#onboarding-content');
-            if (content) content.classList.remove('scale-95');
-        }, 500); // Increased delay slightly to avoid conflict with load
-    }
-
-    if (closeOnboardingBtn && onboardingModal) {
-        closeOnboardingBtn.addEventListener('click', () => {
-            // Animate out
-            onboardingModal.classList.add('opacity-0');
-            const content = onboardingModal.querySelector('#onboarding-content');
-            if (content) content.classList.add('scale-95');
-
-            setTimeout(() => {
-                onboardingModal.classList.add('hidden');
-                // Save state
-                localStorage.setItem('rep_onboarding_seen', 'true');
-            }, 300);
-        });
-    }
-
-    // Initial Load - Moved to end of file to ensure all functions are defined
-    // handleHashChange();
-    // populateBrandDropdown();
 
     // --- Brand System Logic ---
     function populateBrandDropdown() {
@@ -1217,7 +941,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const tempBrand = { name, tone, style, keywords, forbidden, examples };
             const testText = "AI 기술이 우리의 일상과 비즈니스를 어떻게 변화시킬까요? 미래를 준비하는 자세에 대해 이야기해주세요.";
 
-            // Generate for Twitter as a quick test
+            // General test context
             const output = await window.aiService.generateContent(testText, ['twitter'], 'Korean', tempBrand);
 
             if (resultContent) {
@@ -1226,37 +950,20 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Test Gen Error:', error);
             if (resultContent) {
-                let errorMessage = error.message;
-                if (errorMessage.toLowerCase().includes('api key') || errorMessage.toLowerCase().includes('not valid')) {
-                    resultContent.innerHTML = `
-                        <div class="space-y-2">
-                            <p class="text-red-500 font-medium font-bold">⚠️ API 키 오류</p>
-                            <p class="text-gray-500 text-[10px]">API 키가 유효하지 않거나 설정되지 않았습니다. [설정]에서 확인해주세요.</p>
-                            <button onclick="window.closeBrandEditor(); window.location.hash = 'settings';" class="text-brand font-bold hover:underline text-[10px] flex items-center gap-1">
-                                설정 페이지로 이동하기 <i data-lucide="external-link" class="w-3 h-3"></i>
-                            </button>
-                        </div>
-                    `;
-                } else if (errorMessage.toLowerCase().includes('quota') || errorMessage.toLowerCase().includes('rate limit')) {
-                    resultContent.innerHTML = `
-                        <div class="space-y-2">
-                            <p class="text-orange-500 font-medium font-bold">⚠️ 생성 할당량 초과</p>
-                            <p class="text-gray-500 text-[10px]">무료 티어 할당량을 모두 사용했습니다. 잠시 후 다시 시도하거나, 별도의 API 키를 설정해주세요.</p>
-                            <button onclick="window.closeBrandEditor(); window.location.hash = 'settings';" class="text-brand font-bold hover:underline text-[10px] flex items-center gap-1">
-                                나만의 API 키 등록하러 가기 <i data-lucide="key" class="w-3 h-3"></i>
-                            </button>
-                        </div>
-                    `;
+                const msg = error.message.toLowerCase();
+                if (msg.includes('api key') || msg.includes('not valid')) {
+                    resultContent.innerHTML = `<span class="text-red-500 font-bold text-xs">⚠️ API 키 오류: 설정에서 키를 확인해주세요.</span>`;
+                } else if (msg.includes('quota') || msg.includes('rate limit')) {
+                    resultContent.innerHTML = `<span class="text-orange-500 font-bold text-xs">⚠️ 할당량 초과: 무료 사용량을 모두 소진했습니다.</span>`;
                 } else {
-                    resultContent.innerHTML = '<span class="text-red-500 text-[10px]">테스트 생성 실패: ' + errorMessage + '</span>';
+                    resultContent.innerHTML = `<span class="text-red-500 text-xs text-bold">오류 발생: ${error.message}</span>`;
                 }
-                lucide.createIcons();
             }
         }
     };
 
     window.editBrand = function (id) {
-        openBrandEditor(id);
+        if (window.openBrandEditor) window.openBrandEditor(id);
     };
 
     window.deleteBrand = async function (id) {
@@ -1269,10 +976,60 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Initial Load - Delayed to ensure all functions and services are ready
+    // Initial Onboarding Check (logic moved from extracted block)
+    const onboardingModal = document.getElementById('onboarding-modal');
+    const closeOnboardingBtn = document.getElementById('close-onboarding');
+
+    if (!localStorage.getItem('rep_onboarding_seen')) {
+        if (onboardingModal) {
+            onboardingModal.classList.remove('hidden');
+            setTimeout(() => {
+                onboardingModal.classList.remove('opacity-0');
+                const content = onboardingModal.querySelector('#onboarding-content');
+                if (content) content.classList.remove('scale-95');
+            }, 100);
+        }
+    }
+
+    // Expose for Settings
+    window.openOnboardingModal = function () {
+        if (onboardingModal) {
+            // Ensure logic assumes we want to show it now
+            onboardingModal.classList.remove('hidden');
+            setTimeout(() => {
+                onboardingModal.classList.remove('opacity-0');
+                const content = onboardingModal.querySelector('#onboarding-content');
+                if (content) content.classList.remove('scale-95');
+            }, 10);
+        }
+    };
+
+    if (closeOnboardingBtn) {
+        closeOnboardingBtn.addEventListener('click', () => {
+            localStorage.setItem('rep_onboarding_seen', 'true');
+            // Remove pending class to reveal dashboard
+            document.documentElement.classList.remove('onboarding-pending');
+
+            if (onboardingModal) {
+                onboardingModal.classList.add('opacity-0');
+                const content = onboardingModal.querySelector('#onboarding-content');
+                if (content) content.classList.add('scale-95');
+                setTimeout(() => {
+                    onboardingModal.classList.add('hidden');
+                }, 300);
+            }
+        });
+    }
+
+    // Initial Load
     setTimeout(() => {
         handleHashChange();
         populateBrandDropdown();
-        if (typeof initSettings === 'function') initSettings();
-    }, 0);
-});
+        if (window.loadHistory && window.location.hash === '#dashboard') {
+            window.loadHistory();
+        }
+        // Reveal Layout
+        document.documentElement.classList.remove('app-loading');
+    }, 50);
+
+}); // End of DOMContentLoaded

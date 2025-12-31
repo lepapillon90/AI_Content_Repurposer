@@ -58,3 +58,37 @@ textarea::-webkit-scrollbar-thumb:hover {
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.18);
 }
+
+/* Optimization: Responsive Tables for Markdown Output */
+.prose table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+.prose table th,
+.prose table td {
+    border: 1px solid #e2e8f0;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.dark .prose table th,
+.dark .prose table td {
+    border-color: #334155;
+    background-color: #1e293b;
+    color: #e2e8f0;
+}
+
+.prose table th {
+    background-color: #f8fafc;
+    font-weight: 600;
+    text-align: left;
+}
+
+.dark .prose table th {
+    background-color: #0f172a;
+}
