@@ -1,0 +1,51 @@
+# Firebase 작업 예정 목록 (2026.01.01 기준)
+
+현재 프로젝트는 `Front-end Only`로 구현되어 있으며, 주요 데이터와 인증 상태를 브라우저의 `localStorage`에 의존하고 있습니다. 이를 실제 서비스 가능한 수준으로 올리기 위해 필요한 Firebase 통합 작업들입니다.
+
+## 1. Authentication (사용자 인증)
+**목표**: `localStorage` 기반의 가짜 로그인을 실제 Firebase Auth로 대체하여 보안성 및 다중 기기 연동 지원.
+
+- [ ] **Firebase 프로젝트 설정**: Firebase Console에서 Auth 기능 활성화 (이메일/비밀번호).
+- [ ] **SDK 초기화**: `js/firebase-config.js` 생성 및 Firebase 앱 초기화 코드 작성.
+- [ ] **회원가입 (`signup.html`)**: `createUserWithEmailAndPassword` API 연동.
+- [ ] **로그인 (`login.html`)**: `signInWithEmailAndPassword` API 연동.
+- [ ] **상태 관리 (`app.js`)**: 
+    - `onAuthStateChanged` 리스너를 통해 실시간 로그인 상태 감지.
+    - 기존 `localStorage` 체크 로직(`updateAuthUI`)을 Firebase 상태 기반으로 변경.
+- [ ] **로그아웃**: `signOut` 호출 및 리다이렉트 처리.
+
+## 2. Cloud Firestore (데이터베이스)
+**목표**: 생성된 콘텐츠 기록과 사용자 설정을 클라우드에 영구 저장.
+
+- [ ] **설계**:
+    - `users` 컬렉션: 사용자 프로필, 기본 설정(테마, 선호 언어 등).
+    - `history` 컬렉션: AI 생성 결과물 저장.
+        - 필드 구조 예시:
+          ```json
+          {
+            "userId": "auth_uid",
+            "content": "생성된 텍스트...",
+            "platform": "twitter",
+            "language": "Korean",
+            "createdAt": "timestamp"
+          }
+          ```
+- [ ] **CRUD 구현 (`js/database.js` 예정)**:
+    - **생성(Create)**: AI 생성 완료 시 Firestore에 문서 추가 (`addDoc`).
+    - **조회(Read)**: 대시보드 진입 시 해당 사용자의 기록만 쿼리 (`where`, `orderBy`).
+    - **삭제(Delete)**: 기록 삭제 기능 연동 (`deleteDoc`).
+    - **보안 규칙(Security Rules)**: 본인의 데이터만 읽고 쓸 수 있도록 규칙 설정.
+
+## 3. Hosting (배포)
+**목표**: 로컬 환경(`Live Server`)에서 벗어나 실제 웹 서버에 배포.
+
+- [ ] **Firebase CLI**: `firebase init hosting` 실행.
+- [ ] **SPA 설정**: `firebase.json`에서 모든 경로를 `index.html`로 리다이렉트(Rewrite) 설정 (현재 해시 라우팅을 사용 중이므로 필수 아닐 수 있으나 권장).
+- [ ] **배포**: `firebase deploy` 실행.
+
+## 4. 보안 및 확장 (Functions 고려)
+**목표**: API Key 노출 방지 및 서버 로직 처리.
+
+- [ ] **Gemini API Proxy**:
+    - 현재: 클라이언트(Front)에서 직접 Gemini API 호출 (API Key 노출 위험).
+    - 개선: Cloud Functions를 만들어 API Key를 서버 환경변수에 숨기고, 프론트는 Functions를 호출하도록 구조 변경.

@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     name: 'Demo User'
                 };
                 localStorage.setItem('rep_user', JSON.stringify(user));
-                window.location.href = 'dashboard.html';
+                window.location.href = 'index.html#home';
             });
         }
     }

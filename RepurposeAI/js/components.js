@@ -62,6 +62,10 @@ window.Components = {
                     <i data-lucide="${this.icons.dashboard}" class="w-5 h-5 ${dashIconClass}"></i>
                     대시보드
                 </a>
+                <a href="#settings" class="flex items-center gap-3 px-3 py-2.5 rounded-lg ${activePage === 'settings' ? 'bg-brand text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 group'} transition-all font-medium">
+                    <i data-lucide="${this.icons.settings || 'settings'}" class="w-5 h-5 ${activePage === 'settings' ? '' : 'group-hover:text-brand dark:group-hover:text-brand-light transition-colors'}"></i>
+                    설정
+                </a>
                 
                 <!-- Future Menu Item Placeholder -->
                 <div class="pt-4 mt-4 border-t border-gray-100 dark:border-dark-border">

@@ -56,6 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const sidebar = document.getElementById('sidebar');
         if (sidebar && !sidebar.classList.contains('-translate-x-full')) {
             toggleSidebar();
+        } else {
+            // Safety: Ensure scrolling is enabled
+            document.body.classList.remove('overflow-hidden');
         }
     }
 
@@ -153,9 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (logoutBtn) {
             logoutBtn.onclick = () => {
                 localStorage.removeItem('rep_user');
-                // Go to home and reload
-                window.location.hash = 'home';
-                window.location.reload();
+                // Redirect to login page
+                window.location.href = 'login.html';
             };
         }
     }
@@ -164,13 +166,14 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAuthUI();
 
     // Helper: Save to History
-    function saveToHistory(content, platform) {
+    function saveToHistory(content, platform, originalInput) {
         if (!user) return; // Only save if logged in
 
         const history = JSON.parse(localStorage.getItem('rep_history') || '[]');
         const newItem = {
             id: Date.now(),
             content: content,
+            originalInput: originalInput || '',
             platform: platform,
             timestamp: new Date().toISOString()
         };
@@ -224,28 +227,81 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <p class="text-xs text-gray-400">${date}</p>
                             </div>
                         </div>
-                        <button class="copy-item-btn text-gray-400 hover:text-brand transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg" data-content="${encodeURIComponent(item.content)}" title="복사">
-                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        <div class="flex items-center gap-1">
+                            <button class="copy-item-btn text-gray-400 hover:text-brand transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg" data-content="${encodeURIComponent(item.content)}" title="복사">
+                                <i data-lucide="copy" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="deleteHistoryItem(${item.id})" class="text-gray-400 hover:text-red-500 transition-colors p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg" title="삭제">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    ${item.originalInput ? `
+                    <div class="mb-3">
+                         <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">원본 내용:</p>
+                         <div class="text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-dark-bg p-3 rounded-lg italic border border-gray-200 dark:border-dark-border">
+                            "${item.originalInput}"
+                         </div>
+                    </div>
+                    ` : ''}
+
+                    <div class="relative">
+                        <div id="content-${item.id}" class="text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap leading-relaxed line-clamp-3 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-inner transition-all duration-300">
+                            ${marked.parse(item.content)}
+                        </div>
+                        <button onclick="toggleContent('${item.id}')" id="btn-${item.id}" class="mt-2 text-xs font-medium text-brand hover:text-brand-dark dark:text-brand-light dark:hover:text-white flex items-center gap-1 transition-colors">
+                            <span>전체내용 보기</span>
+                            <i data-lucide="chevron-down" class="w-3 h-3"></i>
                         </button>
                     </div>
-                    <div class="text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap leading-relaxed line-clamp-3 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800">${item.content}</div>
                 `;
                 historyContainer.appendChild(card);
             });
 
-            // Re-render icons for new elements
+            // Re-initialize icons for new elements
             lucide.createIcons();
+        }
 
-            // Handle Copy for History Items
-            document.querySelectorAll('.copy-item-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const content = decodeURIComponent(e.currentTarget.dataset.content);
-                    navigator.clipboard.writeText(content).then(() => {
-                        showToast('복사되었습니다');
-                    });
+        // Global function to toggle content
+        window.toggleContent = function (id) {
+            const contentDiv = document.getElementById(`content-${id}`);
+            const btn = document.getElementById(`btn-${id}`);
+            const isCollapsed = contentDiv.classList.contains('line-clamp-3');
+
+            if (isCollapsed) {
+                contentDiv.classList.remove('line-clamp-3');
+                btn.innerHTML = `<span>접기</span><i data-lucide="chevron-up" class="w-3 h-3"></i>`;
+            } else {
+                contentDiv.classList.add('line-clamp-3');
+                btn.innerHTML = `<span>전체내용 보기</span><i data-lucide="chevron-down" class="w-3 h-3"></i>`;
+            }
+            lucide.createIcons();
+        };
+
+        // Global function to delete item
+        window.deleteHistoryItem = function (id) {
+            if (confirm('이 기록을 삭제하시겠습니까?')) {
+                const history = JSON.parse(localStorage.getItem('rep_history') || '[]');
+                const newHistory = history.filter(item => item.id !== id);
+                localStorage.setItem('rep_history', JSON.stringify(newHistory));
+                loadHistory(); // Reload UI
+                showToast('삭제되었습니다.', 2000);
+            }
+        };
+
+        // Re-render icons for new elements
+        lucide.createIcons();
+
+        // Handle Copy for History Items
+        document.querySelectorAll('.copy-item-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const content = decodeURIComponent(e.currentTarget.dataset.content);
+                navigator.clipboard.writeText(content).then(() => {
+                    showToast('복사되었습니다');
                 });
             });
-        }
+        });
     }
 
     // --- Content Generation (Only if elements exist) ---
@@ -299,22 +355,35 @@ document.addEventListener('DOMContentLoaded', () => {
             setLoadingState(true);
 
             try {
-                // Simulate AI Delay
-                await new Promise(resolve => setTimeout(resolve, SIMULATION_DELAY_MS));
+                // Call AI Service
+                // Use key from input if provided
+                const languageSelect = document.getElementById('language-select');
+                const selectedLanguage = languageSelect ? languageSelect.value : 'Korean';
 
-                // Mock Generation
-                const generatedContent = generateMockContent(text, selectedPlatform);
+                // API Key is handled globally via Settings/localStorage now.
+                // No need to check individual input field here.
 
-                // UI: Show Result
-                displayResult(generatedContent);
+                const generatedContent = await window.aiService.generateContent(text, selectedPlatform, selectedLanguage);
+
+                // Display Result with Markdown
+                outputContent.innerHTML = marked.parse(generatedContent);
+                outputContent.classList.remove('hidden');
+
+                // Show Translation Controls
+                translateSection.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-1');
+                copyBtn.classList.remove('opacity-0', 'pointer-events-none');
+                copyBtn.disabled = false;
+
                 showToast('콘텐츠가 생성되었습니다!', 2000);
 
-                // Save to History
-                saveToHistory(generatedContent, selectedPlatform);
+                // Save to History (Save RAW text for editing/re-use, but display can be MD)
+                saveToHistory(generatedContent, selectedPlatform, text);
 
             } catch (error) {
                 console.error('Generation failed:', error);
-                showToast('오류가 발생했습니다. 다시 시도해주세요.');
+
+                // Show detailed error for debugging
+                showToast(`오류: ${error.message || '알 수 없는 오류'}`, 5000);
             } finally {
                 // UI: Stop Loading
                 setLoadingState(false);
@@ -347,25 +416,84 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        function displayResult(content) {
-            if (outputContent) outputContent.textContent = content;
+    }
 
-            if (outputPlaceholder) outputPlaceholder.classList.add('hidden');
-            if (outputContent) outputContent.classList.remove('hidden');
-            if (outputContent) outputContent.classList.add('animate-fade-in');
+    // 2a. Translation Action
+    const translateBtn = document.getElementById('translate-btn');
+    const translateLang = document.getElementById('translate-lang');
+    const translateSection = document.getElementById('translate-section');
 
-            if (outputCard) {
-                outputCard.classList.remove('border-dashed');
-                outputCard.classList.add('border-brand/20', 'bg-blue-50/10', 'dark:border-brand-light/20', 'dark:bg-blue-900/10');
+    if (translateBtn && translateLang) {
+        translateBtn.addEventListener('click', async () => {
+            const currentContent = outputContent.textContent;
+            const targetLang = translateLang.value;
+
+            if (!currentContent || currentContent === '아직 생성된 콘텐츠가 없습니다.') {
+                showToast('번역할 콘텐츠가 없습니다.');
+                return;
+            }
+            if (!targetLang) {
+                showToast('언어를 선택해주세요.');
+                return;
             }
 
-            if (copyBtn) {
-                copyBtn.style.opacity = '1';
-                copyBtn.classList.remove('pointer-events-none');
-                copyBtn.disabled = false;
+            // UI: Start Loading (Partial)
+            translateBtn.disabled = true;
+            translateBtn.innerHTML = '<div class="w-3 h-3 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></div>';
+
+            // Show main loader overlay as well for better UX
+            if (outputLoader) outputLoader.classList.remove('hidden');
+
+            try {
+                const translatedText = await window.aiService.translateContent(currentContent, targetLang);
+
+                // Note: We don't necessarily overwrite the history item here, 
+                outputContent.classList.remove('opacity-50', 'animate-pulse');
+
+                // Update content with Markdown support
+                outputContent.innerHTML = marked.parse(translatedText);
+
+                showToast('번역 완료!', 2000);
+
+            } catch (error) {
+                console.error('Translation failed:', error);
+                showToast(`번역 오류: ${error.message}`, 3000);
+                outputContent.classList.remove('opacity-50', 'animate-pulse');
+            } finally {
+                // UI: Reset Button
+                translateBtn.disabled = false;
+                translateBtn.innerHTML = '<i data-lucide="languages" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">번역</span>';
+                lucide.createIcons();
+
+                if (outputLoader) outputLoader.classList.add('hidden');
             }
+        });
+    }
+
+    function displayResult(content) {
+        if (outputContent) outputContent.textContent = content;
+
+        if (outputPlaceholder) outputPlaceholder.classList.add('hidden');
+        if (outputContent) outputContent.classList.remove('hidden');
+        if (outputContent) outputContent.classList.add('animate-fade-in');
+
+        if (outputCard) {
+            outputCard.classList.remove('border-dashed');
+            outputCard.classList.add('border-brand/20', 'bg-blue-50/10', 'dark:border-brand-light/20', 'dark:bg-blue-900/10');
+        }
+
+        if (copyBtn) {
+            copyBtn.style.opacity = '1';
+            copyBtn.classList.remove('pointer-events-none');
+            copyBtn.disabled = false;
+        }
+
+        // Show Translate Controls when content exists
+        if (translateSection) {
+            translateSection.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-1');
         }
     }
+
 
 
     // 3. Copy Action
@@ -424,6 +552,109 @@ document.addEventListener('DOMContentLoaded', () => {
             return `[YouTube Shorts 스크립트]\n\n(0:00-0:05)\n🎥 [화면: 호기심을 자극하는 배경 영상 + 큰 텍스트 "이거 알고 계셨나요?"]\n🗣️ 내레이션: "${context}"... 혹시 이렇게 생각해보신 적 있나요?\n\n(0:05-0:15)\n🎥 [화면: 핵심 내용이 3가지 포인트로 빠르게 지나감]\n🗣️ 내레이션: 사실 진짜 비밀은 여기에 있습니다. 첫째, ... 둘째, ...\n\n(0:15-0:30)\n🎥 [화면: 화자가 직접 설명하거나 인상적인 결과 화면]\n🗣️ 내레이션: 지금 바로 적용해보세요. 결과가 달라질 겁니다!\n\n(0:30-0:60)\n🎥 [화면: 구독 버튼을 가리키는 손가락]\n🗣️ 내레이션: 더 많은 꿀팁을 원하신다면 구독과 좋아요 부탁드려요! 👍`;
         }
         return "콘텐츠 생성 오류";
+    }
+
+    // --- Settings View Logic ---
+    function initSettings() {
+        const settingsApiKeyInput = document.getElementById('settings-api-key');
+        const saveApiKeyBtn = document.getElementById('save-api-key-btn');
+        const clearHistoryBtn = document.getElementById('clear-history-btn');
+
+        if (settingsApiKeyInput && saveApiKeyBtn) {
+            // Load saved key
+            const savedKey = localStorage.getItem('rep_api_key');
+            if (savedKey) {
+                settingsApiKeyInput.value = savedKey;
+                window.aiService.setApiKey(savedKey);
+            }
+
+            // Save key
+            saveApiKeyBtn.addEventListener('click', () => {
+                const newKey = settingsApiKeyInput.value.trim();
+                if (newKey) {
+                    localStorage.setItem('rep_api_key', newKey);
+                    window.aiService.setApiKey(newKey);
+                    showToast('API 키가 저장되었습니다.');
+                } else {
+                    localStorage.removeItem('rep_api_key');
+                    window.aiService.setApiKey(null); // Will revert to default or explicit null check
+                    showToast('API 키가 삭제되었습니다. (기본값 사용)');
+                }
+            });
+        }
+
+        if (clearHistoryBtn) {
+            clearHistoryBtn.addEventListener('click', () => {
+                if (confirm('모든 생성 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                    localStorage.removeItem('rep_history');
+                    showToast('모든 기록이 삭제되었습니다.');
+                    // Refresh view if on dashboard
+                    if (window.location.hash === '#dashboard') {
+                        loadHistory();
+                    }
+                }
+            });
+        }
+
+        // Reset Onboarding Button
+        const resetOnboardingBtn = document.getElementById('reset-onboarding-btn');
+        if (resetOnboardingBtn) {
+            resetOnboardingBtn.addEventListener('click', () => {
+                localStorage.removeItem('rep_onboarding_seen');
+                // Trigger modal show logic immediately
+                const onboardingModal = document.getElementById('onboarding-modal');
+                if (onboardingModal) {
+                    onboardingModal.classList.remove('hidden');
+                    setTimeout(() => {
+                        onboardingModal.classList.remove('opacity-0');
+                        const content = onboardingModal.querySelector('#onboarding-content');
+                        if (content) content.classList.remove('scale-95');
+                    }, 100);
+                }
+            });
+        }
+    }
+
+    // --- Onboarding Logic (Moved to Main Scope) ---
+    // Check if user has seen onboarding
+    // Called once on load (handled by logic below)
+
+    // Call initSettings on load and hash change to ensure elements are bound
+    const savedGlobalKey = localStorage.getItem('rep_api_key');
+    if (savedGlobalKey) {
+        window.aiService.setApiKey(savedGlobalKey);
+    }
+    initSettings();
+
+    // Initial Onboarding Check (Run once)
+    const onboardingModal = document.getElementById('onboarding-modal');
+    const closeOnboardingBtn = document.getElementById('close-onboarding');
+    const hasSeenOnboarding = localStorage.getItem('rep_onboarding_seen');
+
+    if (!hasSeenOnboarding && onboardingModal) {
+        // Show modal with animation
+        onboardingModal.classList.remove('hidden');
+        // Slight delay for fade-in effect
+        setTimeout(() => {
+            onboardingModal.classList.remove('opacity-0');
+            const content = onboardingModal.querySelector('#onboarding-content');
+            if (content) content.classList.remove('scale-95');
+        }, 500); // Increased delay slightly to avoid conflict with load
+    }
+
+    if (closeOnboardingBtn && onboardingModal) {
+        closeOnboardingBtn.addEventListener('click', () => {
+            // Animate out
+            onboardingModal.classList.add('opacity-0');
+            const content = onboardingModal.querySelector('#onboarding-content');
+            if (content) content.classList.add('scale-95');
+
+            setTimeout(() => {
+                onboardingModal.classList.add('hidden');
+                // Save state
+                localStorage.setItem('rep_onboarding_seen', 'true');
+            }, 300);
+        });
     }
 
     // Initial Load (Safe after declarations)
