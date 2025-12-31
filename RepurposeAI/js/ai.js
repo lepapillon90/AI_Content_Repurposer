@@ -7,7 +7,7 @@ class AIService {
         this.provider = localStorage.getItem('rep_ai_provider') || 'gemini';
         this.apiKey = localStorage.getItem('rep_api_key') || 'AlzaSyB-arYE785mPj8q1lPusdesE7q9StF_PDA';
         this.openaiKey = localStorage.getItem('rep_openai_key') || '';
-        this.model = 'gemini-2.0-flash-exp'; // Using latest fast model
+        this.model = 'gemini-2.5-flash'; // Updated to latest stable model
         this.openaiModel = 'gpt-4o-mini';
     }
 
