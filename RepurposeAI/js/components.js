@@ -62,6 +62,10 @@ window.Components = {
                     <i data-lucide="${this.icons.dashboard}" class="w-5 h-5 ${dashIconClass}"></i>
                     대시보드
                 </a>
+                <a href="#brands" class="flex items-center gap-3 px-3 py-2.5 rounded-lg ${activePage === 'brands' ? 'bg-brand text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 group'} transition-all font-medium">
+                    <i data-lucide="briefcase" class="w-5 h-5 ${activePage === 'brands' ? '' : 'group-hover:text-brand dark:group-hover:text-brand-light transition-colors'}"></i>
+                    브랜드 프로필
+                </a>
                 <a href="#settings" class="flex items-center gap-3 px-3 py-2.5 rounded-lg ${activePage === 'settings' ? 'bg-brand text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 group'} transition-all font-medium">
                     <i data-lucide="${this.icons.settings || 'settings'}" class="w-5 h-5 ${activePage === 'settings' ? '' : 'group-hover:text-brand dark:group-hover:text-brand-light transition-colors'}"></i>
                     설정
@@ -134,6 +138,33 @@ window.Components = {
         `;
     },
 
+    // --- Global Modal Component ---
+    renderGlobalModal: function () {
+        return `
+        <div id="app-modal" class="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+            <div class="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border p-6 rounded-2xl shadow-2xl max-w-sm w-[90%] transform scale-95 transition-all duration-300" id="app-modal-content">
+                <div class="flex items-start gap-4">
+                    <div id="modal-icon-container" class="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 bg-brand/10 text-brand">
+                        <i data-lucide="alert-circle" id="modal-icon" class="w-6 h-6"></i>
+                    </div>
+                    <div class="flex-grow">
+                        <h3 id="modal-title" class="text-lg font-bold text-gray-900 dark:text-white mb-1">안내</h3>
+                        <p id="modal-message" class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed"></p>
+                    </div>
+                </div>
+                <div id="modal-footer" class="flex gap-3 justify-end mt-8">
+                    <button id="modal-cancel-btn" class="flex-1 sm:flex-none px-6 py-2.5 rounded-xl border border-gray-200 dark:border-dark-border text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-medium transition-colors hidden">
+                        취소
+                    </button>
+                    <button id="modal-confirm-btn" class="flex-1 sm:flex-none px-6 py-2.5 rounded-xl bg-brand text-white hover:bg-brand-dark text-sm font-medium shadow-lg shadow-brand/20 transition-all active:scale-95">
+                        확인
+                    </button>
+                </div>
+            </div>
+        </div>
+        `;
+    },
+
     // --- Initialization ---
     init: function () {
         // Use hash for routing (SPA), default to 'home'
@@ -153,10 +184,88 @@ window.Components = {
             headerContainer.innerHTML = this.renderHeader();
         }
 
+        // Inject Global Modal if it doesn't exist
+        if (!document.getElementById('app-modal')) {
+            const modalWrapper = document.createElement('div');
+            modalWrapper.innerHTML = this.renderGlobalModal();
+            document.body.appendChild(modalWrapper.firstElementChild);
+        }
+
         // Refresh Icons
         if (window.lucide) {
             window.lucide.createIcons();
         }
+
+        // --- Global Modal Service Logic ---
+        window.showAppModal = function ({ title, message, type = 'alert', confirmText = '확인', cancelText = '취소' }) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('app-modal');
+                const modalContent = document.getElementById('app-modal-content');
+                const modalTitle = document.getElementById('modal-title');
+                const modalMessage = document.getElementById('modal-message');
+                const modalCancelBtn = document.getElementById('modal-cancel-btn');
+                const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+                const modalIcon = document.getElementById('modal-icon');
+                const modalIconContainer = document.getElementById('modal-icon-container');
+
+                if (!modal) return resolve(false);
+
+                modalTitle.innerText = title;
+                modalMessage.innerText = message;
+                modalConfirmBtn.innerText = confirmText;
+                modalCancelBtn.innerText = cancelText;
+
+                // Type handling
+                if (type === 'confirm') {
+                    modalCancelBtn.classList.remove('hidden');
+                    modalIconContainer.className = 'w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 bg-red-50 text-red-500 dark:bg-red-900/20';
+                    modalIcon.setAttribute('data-lucide', 'alert-triangle');
+                } else {
+                    modalCancelBtn.classList.add('hidden');
+                    modalIconContainer.className = 'w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 bg-brand/10 text-brand dark:bg-brand/20';
+                    modalIcon.setAttribute('data-lucide', 'info');
+                }
+                if (window.lucide) lucide.createIcons();
+
+                // Show animation
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    if (modalContent) modalContent.classList.remove('scale-95');
+                }, 10);
+
+                const handleConfirm = () => {
+                    cleanup();
+                    resolve(true);
+                };
+
+                const handleCancel = () => {
+                    cleanup();
+                    resolve(false);
+                };
+
+                const cleanup = () => {
+                    modal.classList.add('opacity-0');
+                    if (modalContent) modalContent.classList.add('scale-95');
+                    setTimeout(() => {
+                        modal.classList.add('hidden');
+                        modalConfirmBtn.removeEventListener('click', handleConfirm);
+                        modalCancelBtn.removeEventListener('click', handleCancel);
+                    }, 300);
+                };
+
+                modalConfirmBtn.addEventListener('click', handleConfirm, { once: true });
+                modalCancelBtn.addEventListener('click', handleCancel, { once: true });
+            });
+        };
+
+        window.showAppConfirm = function (title, message, confirmText = '확인') {
+            return window.showAppModal({ title, message, type: 'confirm', confirmText });
+        };
+
+        window.showAppAlert = function (title, message) {
+            return window.showAppModal({ title, message, type: 'alert' });
+        };
     }
 };
 

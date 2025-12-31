@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await new Promise(r => setTimeout(r, 1500));
 
-            alert(`"${email}"로 비밀번호 재설정 링크가 전송되었습니다.\n(데모 기능입니다)`);
+            await showAppAlert('비밀번호 재설정', `"${email}"로 비밀번호 재설정 링크가 전송되었습니다.\n(데모 기능입니다)`);
 
             setLoading(btn, false);
             window.location.href = 'login.html';

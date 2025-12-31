@@ -4,130 +4,296 @@
  */
 class AIService {
     constructor() {
-        // Key provided by user via image - Default
-        // If this is still invalid, user can input their own in the UI.
-        this.apiKey = 'AlzaSyB-arYE785mPj8q1lPusdesE7q9StF_PDA';
-        this.model = 'gemini-2.5-flash'; // Updated to match user's screenshot
+        this.provider = localStorage.getItem('rep_ai_provider') || 'gemini';
+        this.apiKey = localStorage.getItem('rep_api_key') || 'AlzaSyB-arYE785mPj8q1lPusdesE7q9StF_PDA';
+        this.openaiKey = localStorage.getItem('rep_openai_key') || '';
+        this.model = 'gemini-2.0-flash-exp'; // Using latest fast model
+        this.openaiModel = 'gpt-4o-mini';
     }
 
-    /**
-     * Set the API Key
-     * @param {string} key 
-     */
+    setProvider(provider) {
+        this.provider = provider;
+        localStorage.setItem('rep_ai_provider', provider);
+    }
+
     setApiKey(key) {
         this.apiKey = key;
     }
 
-    /**
-     * Generate content based on platform and input text
-     * @param {string} text - The source text
-     * @param {string} platform - Target platform (twitter, linkedin, instagram, youtube)
-     * @param {string} language - Target language (Korean, English, etc.)
-     * @returns {Promise<string>} - Generated content
-     */
-    async generateContent(text, platform, language = 'Korean') {
-        if (!this.apiKey || this.apiKey === 'YOUR_API_KEY_HERE') {
-            console.warn('API Key is missing. Using mock response.');
-            return this.getMockResponse(text, platform);
-        }
+    setOpenAIKey(key) {
+        this.openaiKey = key;
+    }
 
-        const promptData = this.getPrompt(text, platform, language);
-        // Combine system instruction and user prompt for Gemini (or use systemInstruction if model supports it, 
-        // but 1.5-flash simple chat works well with combined prompt for this case)
-        const activePrompt = `${promptData.system}\n\n${promptData.user}`;
+    /**
+     * Simple check to see if the API key is valid
+     * @returns {Promise<boolean>}
+     */
+    async validateApiKey() {
+        if (!this.apiKey) return false;
 
         try {
-            return await this.callGemini(activePrompt);
+            const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${this.apiKey}`;
+            const response = await fetch(url);
+            return response.ok;
         } catch (error) {
-            console.error('AI Generation Error:', error);
-            throw error;
+            console.error('Gemini Validation Error:', error);
+            return false;
         }
     }
 
-    /**
-     * Construct specific prompts for each platform
-     */
-    getPrompt(text, platform, language) {
-        const languageInstruction = `Output Language: ${language}. Ensure the tone and nuances are natural for a native speaker of this language.`;
-
-        const prompts = {
-            twitter: {
-                system: `You are a social media expert specializing in Twitter growth. Convert the user's input into an engaging, viral-worthy Twitter Thread. \n- Use '🧵 1/x' format.\n- Keep sentences punchy and short.\n- Use emojis moderately.\n- End with a call to action or question.\n${languageInstruction}`,
-                user: `Content to repurpose: "${text}"`
-            },
-            linkedin: {
-                system: `You are a LinkedIn top voice and thought leader. Repurpose the user's input into a professional, insightful LinkedIn post. \n- Use a strong hook/headline.\n- Use bullet points for readability.\n- Tone: Professional yet personal and authentic.\n- Include relevant hashtags at the bottom.\n${languageInstruction}`,
-                user: `Content to repurpose: "${text}"`
-            },
-            instagram: {
-                system: `You are an Instagram influencer. Create an engaging caption for the user's content. \n- Start with a catchy hook.\n- Include a 'Save this post' reminder.\n- Use a friendly, energetic tone.\n- Include a block of relevant hashtags.\n${languageInstruction}`,
-                user: `Content to repurpose: "${text}"`
-            },
-            youtube: {
-                system: `You are a YouTube creative director. Write a 60-second YouTube Shorts script based on the user's input. \n- Format: [Visual Cue] followed by [Audio/Narration].\n- Keep it fast-paced.\n- Include a strong hook in the first 3 seconds.\n- End with a subscribe call to action.\n${languageInstruction}`,
-                user: `Content to repurpose: "${text}"`
-            }
-        };
-
-        return prompts[platform] || prompts.twitter;
-    }
-
-    /**
-     * Translate existing content
-     * @param {string} text 
-     * @param {string} targetLanguage 
-     */
-    async translateContent(text, targetLanguage) {
-        if (!this.apiKey || this.apiKey === 'YOUR_API_KEY_HERE') {
-            console.warn('API Key is missing for translation. Using mock.');
-            return `[Mock Translation to ${targetLanguage}]\n${text}`;
-        }
-
-        const prompt = `Translate the following text to ${targetLanguage}. Maintain the original tone, emoji usage, and formatting style exactly.\n\n[Text to Translate]:\n${text}`;
+    async validateOpenAIKey() {
+        if (!this.openaiKey) return false;
 
         try {
+            const response = await fetch('https://api.openai.com/v1/models', {
+                headers: {
+                    'Authorization': `Bearer ${this.openaiKey}`
+                }
+            });
+            return response.ok;
+        } catch (error) {
+            console.error('OpenAI Validation Error:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Generate content based on platforms, brand, and input text
+     */
+    async generateContent(text, platforms, language = 'Korean', brandId = null) {
+        const currentKey = this.provider === 'openai' ? this.openaiKey : this.apiKey;
+
+        if (!currentKey && this.provider === 'openai') {
+            throw new Error('OpenAI API Key is missing. Please set it in Settings.');
+        }
+
+        if (this.provider === 'openai') {
+            return await this.callOpenAI(text, platforms, language, brandId);
+        } else {
+            const prompt = this.constructMegaPrompt(text, platforms, language, brandId);
             return await this.callGemini(prompt);
-        } catch (error) {
-            console.error('Translation Error:', error);
-            throw error;
         }
     }
 
     /**
-     * Helper to call Gemini API
+     * OpenAI Specific Generation
      */
+    async callOpenAI(text, platforms, language, brandInput) {
+        let brandInfo = 'None';
+        let brand = null;
+
+        if (typeof brandInput === 'string' && window.brandService) {
+            brand = window.brandService.getById(brandInput);
+        } else if (brandInput && typeof brandInput === 'object') {
+            brand = brandInput;
+        }
+
+        if (brand) {
+            brandInfo = `브랜드명: ${brand.name}, 톤앤매너: ${brand.tone}, 스타일: ${brand.style}, 필수 키워드: ${brand.keywords || '없음'}, 금지어: ${brand.forbidden || '없음'}`;
+        }
+
+        const platformList = platforms.join(', ');
+        const systemPrompt = `You are a social media expert. Create engaging content based on the input. Optimize for platforms: [${platformList}]. Adhere to brand profiles (tone, style, keywords, forbidden words). Maintain character limits for each platform. Output Language: ${language}. Use Markdown format with '## [Platform Name]' headers.`;
+
+        // Add platform specific constraints for better quality
+        let constraints = '';
+        platforms.forEach(p => {
+            constraints += this.getPlatformSpecificInstruction(p);
+        });
+
+        const userMessage = `원본 텍스트: "${text}"\n\n브랜드 설정: ${brandInfo}\n\n추가 제약사항:\n${constraints}`;
+
+        try {
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.openaiKey}`
+                },
+                body: JSON.stringify({
+                    model: this.openaiModel,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userMessage }
+                    ],
+                    temperature: 0.7
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                const errorMsg = errorData.error?.message || 'OpenAI API Request Failed';
+                const errorCode = errorData.error?.code || '';
+
+                if (errorCode === 'invalid_api_key' || errorMsg.includes('invalid') || response.status === 401) {
+                    throw new Error('OPENAI_INVALID_KEY');
+                } else if (errorCode === 'insufficient_quota' || response.status === 429) {
+                    throw new Error('OPENAI_QUOTA_EXCEEDED');
+                }
+
+                throw new Error(errorMsg);
+            }
+
+            const data = await response.json();
+            return data.choices[0].message.content;
+        } catch (e) {
+            console.error('OpenAI Error:', e);
+            throw e;
+        }
+    }
+
+    /**
+     * Construct the Mega Prompt for multi-platform generation (Gemini)
+     */
+    constructMegaPrompt(text, platforms, language, brandInput) {
+        let brandInstruction = '';
+        let brand = null;
+
+        if (typeof brandInput === 'string' && window.brandService) {
+            brand = window.brandService.getById(brandInput);
+        } else if (brandInput && typeof brandInput === 'object') {
+            brand = brandInput;
+        }
+
+        if (brand) {
+            brandInstruction = `
+### Brand Profile Guidelines (STRICTLY FOLLOW)
+- **Brand Name**: ${brand.name}
+- **Tone & Voice**: ${brand.tone}
+- **Style Guide**: ${brand.style}
+- **Mandatory Keywords**: ${brand.keywords || 'None'}
+- **Forbidden Words**: ${brand.forbidden || 'None'}
+
+${brand.examples ? `**Example Sentences (Mimic this phrasing and rhythm):**\n${brand.examples}\n` : ''}
+`;
+        }
+
+        let taskInstruction = `
+You are a world-class Content Marketing AI Agent specialized in Multi-Platform Repurposing.
+Your task is to repurpose the user's input into high-performing social media posts for: ${platforms.join(', ')}.
+
+**Core Directives**:
+1. **Tone Consistency**: If a Brand Profile is provided, reflect its personality perfectly.
+2. **Platform Native**: Each output must feel native to the platform (formatting, length, visual cues).
+3. **Agency Quality**: Write professionally, but with high impact. Use hooks and patterns used by top creators.
+4. **Mandatory Keywords**: ALWAYS include identified mandatory keywords naturally if provided.
+5. **Character Limits**: STRICTLY adhere to platform character limits.
+
+**Formatting**:
+- Output Language: ${language}
+- Use Markdown.
+- Separate platforms with "## [Platform Name]" headers.
+
+${brandInstruction}
+`;
+
+        platforms.forEach(p => {
+            taskInstruction += this.getPlatformSpecificInstruction(p);
+        });
+
+        taskInstruction += `
+### Final Analysis
+At the very end of the response, please add a "## Post-Generation Analysis" section:
+1. **Recommended Hashtags**: 5-10 relevant hashtags.
+2. **SEO Keywords**: High-traffic keywords used.
+3. **Virality Score**: 0-100 score + 1 sentence logic.
+
+### Input Content for Repurposing:
+"${text}"
+`;
+        return taskInstruction;
+    }
+
+    getPlatformSpecificInstruction(platform) {
+        const instructions = {
+            twitter: `
+#### Twitter Thread Rules:
+- Header: ## Twitter Thread
+- **Limit**: MAX 280 characters per tweet. NO exceptions.
+- **Structure**: Compelling thread (3-5 tweets).
+- **Hook**: First tweet must be a world-class hook. Use '🧵 1/x' numbering.
+`,
+            linkedin: `
+#### LinkedIn Post Rules:
+- Header: ## LinkedIn Post
+- **Limit**: 1000 - 2000 characters (optimal for algorithm).
+- **Structure**: Headline -> Problem -> Solution -> Bullet Points -> CTA.
+- **Tone**: Thought-leadership, professional but conversational.
+`,
+            instagram: `
+#### Instagram & Reels Rules:
+- Header: ## Instagram Reels & Caption
+- **Limit**: Caption under 1000 characters.
+- **Visual Script**: 3-5 scenes with [Visual] and [Audio] cues.
+- **Goal**: Shareable value and high-engagement CTA.
+`,
+            youtube: `
+#### YouTube Shorts Rules:
+- Header: ## YouTube Shorts Script
+- **Limit**: Max 60 seconds of content (approx 160 words).
+- **Structure**: 0-5s Hook, 5-50s Mid-value, 50-60s CTA.
+- **Retention**: Describe fast-paced visual cuts for every 2-3 seconds of audio.
+`,
+            tiktok: `
+#### TikTok Script Rules:
+- Header: ## TikTok Script
+- **Limit**: 15-45 seconds is optimal.
+- **Style**: High energy, immediate hook (0-2 seconds).
+- **Engagement**: Use "Text on Screen" prompts for every scene.
+`
+        };
+        return instructions[platform] || '';
+    }
+
+    async translateContent(text, targetLanguage) {
+        if (this.provider === 'openai') {
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.openaiKey}`
+                },
+                body: JSON.stringify({
+                    model: this.openaiModel,
+                    messages: [
+                        { role: 'system', content: `You are a helpful translator. Translate the following text to ${targetLanguage}. Maintain the original tone, emoji usage, and formatting style exactly.` },
+                        { role: 'user', content: text }
+                    ]
+                })
+            });
+            const data = await response.json();
+            return data.choices[0].message.content;
+        } else {
+            const prompt = `Translate the following text to ${targetLanguage}. Maintain the original tone, emoji usage, and formatting style exactly.\n\n[Text to Translate]:\n${text}`;
+            return await this.callGemini(prompt);
+        }
+    }
+
     async callGemini(promptText) {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
 
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: promptText }] }]
-            })
-        });
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: promptText }] }]
+                })
+            });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error?.message || 'Gemini API Request Failed');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || 'Gemini API Request Failed');
+            }
+
+            const data = await response.json();
+            return data.candidates[0].content.parts[0].text;
+        } catch (e) {
+            console.error(e);
+            throw e;
         }
-
-        const data = await response.json();
-        return data.candidates[0].content.parts[0].text;
-    }
-
-    /**
-     * Temporary mock response
-     */
-    getMockResponse(text, platform) {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                const mock = `[MOCK GEMINI GENERATION for ${platform.toUpperCase()}]\n\n(API Key issue or fallback on "${text.substring(0, 20)}...")`;
-                resolve(mock);
-            }, 1500);
-        });
     }
 }
 
-// Export instance
 window.aiService = new AIService();
+
