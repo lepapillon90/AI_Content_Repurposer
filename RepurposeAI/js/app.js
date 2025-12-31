@@ -516,11 +516,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-xs">OpenAI 계정의 사용 가능 금액이 부족하거나 할당량을 모두 사용했습니다.</p>
                             </div>
                             <div class="flex flex-col gap-2">
-                                <a href="https://platform.openai.com/account/billing" target="_blank" class="px-5 py-2 bg-brand text-white rounded-xl text-xs font-bold shadow-lg shadow-brand/20 flex items-center gap-2">
-                                    OpenAI 카드(결제) 정보 확인 <i data-lucide="credit-card" class="w-3 h-3"></i>
-                                </a>
-                                <a href="https://platform.openai.com/account/usage" target="_blank" class="text-xs text-brand hover:underline font-bold">
-                                    사용량 대시보드 확인하기
+                                <a href="https://platform.openai.com/account/billing" target="_blank" class="px-5 py-2 bg-brand !text-white rounded-xl text-xs font-bold shadow-lg shadow-brand/20 flex items-center gap-2 hover:brightness-110 transition-all">
+                                    OpenAI 결제 및 사용량 확인 <i data-lucide="external-link" class="w-3 h-3"></i>
                                 </a>
                             </div>
                         </div>
@@ -1276,5 +1273,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         handleHashChange();
         populateBrandDropdown();
+        if (typeof initSettings === 'function') initSettings();
     }, 0);
 });
