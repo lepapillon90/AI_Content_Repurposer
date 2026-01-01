@@ -5,9 +5,9 @@
 class AIService {
     constructor() {
         this.provider = localStorage.getItem('rep_ai_provider') || 'gemini';
-        this.apiKey = localStorage.getItem('rep_api_key') || 'AlzaSyB-arYE785mPj8q1lPusdesE7q9StF_PDA';
+        this.apiKey = localStorage.getItem('rep_api_key') || 'AIzaSyB-arYE785mPj8q1lPusdesE7q9StF_PDA';
         this.openaiKey = localStorage.getItem('rep_openai_key') || '';
-        this.model = 'gemini-3-flash-preview'; // Updated as per user request
+        this.model = 'gemini-2.0-flash-exp'; // Updated to latest preview model
         this.openaiModel = 'gpt-4o-mini';
     }
 
@@ -60,7 +60,7 @@ class AIService {
     /**
      * Generate content based on platforms, brand, and input text
      */
-    async generateContent(text, platforms, language = 'Korean', brandId = null) {
+    async generateContent(text, platforms, language = 'Korean', brandInput = null) {
         const currentKey = this.provider === 'openai' ? this.openaiKey : this.apiKey;
 
         if (!currentKey && this.provider === 'openai') {
@@ -68,9 +68,9 @@ class AIService {
         }
 
         if (this.provider === 'openai') {
-            return await this.callOpenAI(text, platforms, language, brandId);
+            return await this.callOpenAI(text, platforms, language, brandInput);
         } else {
-            const prompt = this.constructMegaPrompt(text, platforms, language, brandId);
+            const prompt = this.constructMegaPrompt(text, platforms, language, brandInput);
             return await this.callGemini(prompt);
         }
     }
@@ -89,17 +89,47 @@ class AIService {
         }
 
         if (brand) {
-            brandInfo = `브랜드명: ${brand.name}, 톤앤매너: ${brand.tone}, 스타일: ${brand.style}, 필수 키워드: ${brand.keywords || '없음'}, 금지어: ${brand.forbidden || '없음'}`;
+            brandInfo = `브랜드명: ${brand.name}, 톤앤매너: ${brand.tone}, 스타일: ${brand.style}, 필수 키워드: ${brand.keywords || '없음'}, 금지어: ${brand.forbidden || '없음'}, 타겟 오디언스: ${brand.target || '없음'}${brand.examples ? `, 예시 문장: ${brand.examples}` : ''}`;
         }
 
         const platformList = platforms.join(', ');
-        const systemPrompt = `You are a social media expert. Create engaging content based on the input. Optimize for platforms: [${platformList}]. Adhere to brand profiles (tone, style, keywords, forbidden words). Maintain character limits for each platform. Output Language: ${language}. Use Markdown format with '## [Platform Name]' headers.
-
+        const systemPrompt = `You are a social media expert. Create engaging content based on the input. Optimize for platforms: [${platformList}].
+- Adhere to the provided brand profile (Tone, Style, Target Audience, Example Sentences).
+- **Automatic Highlighting**: You ARE encouraged to use HTML tags for emphasis on KEY information:
+    - Use <b>text</b> for bolding important phrases.
+    - Use <span style="color:red">text</span> for CRITICAL alerts or key takeaways.
+- DO NOT use any markdown asterisks (* or **). Use ONLY the provided HTML tags for emphasis.
+- If 'Naver Blog' is selected, follow these specific SEO rules:
+    - Primary Keyword Placement: Put the main keyword at the beginning of the title.
+    - Structure: Use ## for Main Sections and ### for Sub-sections to mimic Smart Editor One.
+    - Media Guide: Insert '[IMAGE: 관련 이미지 설명]' placeholders frequently.
+    - Depth: Provide detailed information (Long-form content, 1,000+ characters).
+    - Engagement: End naturally by encouraging comments or empathy.
+- Strictly keep forbidden words out of the content.
+- **Automatic Highlighting**: You ARE encouraged to use HTML tags for emphasis on KEY information:
+    - Use <b>text</b> for bolding important phrases.
+    - Use <u>text</u> for underlining.
+    - Use <span style="color:red">text</span> for CRITICAL alerts or key takeaways.
+- DO NOT use markdown emphasis like bold (**) or italic (*). ONLY use the above HTML tags for highlighting.
+Maintain character limits for each platform. Output Language: ${language}.
+Use Markdown format. Use EXACTLY '## [Platform Name]' (e.g., ## Naver Blog) for each platform section.
+DO NOT use '##' for sub-headers INSIDE the content; use '###' or '####' for sub-sections.
 ---
+SPECIAL INSTRUCTIONS FOR NAVER BLOG:
+If 'Naver Blog' is selected, follow these SEO rules:
+1. Title Optimization: Place the primary keyword at the very beginning of the title. Use numbers or curiosity-gap phrases.
+2. Structure (Smart Editor One Style): Use ## for Main Sections (H2) and ### for Sub-sections (H3).
+3. Image Placeholders: Insert '[IMAGE: 브리핑과 관련된 고화질 이미지 설명]' between sections (approx. every 2-3 paragraphs).
+4. Keyword Density: Naturally include keywords 3-5 times in the body.
+5. Content Depth: Aim for informative, long-form content (1,000-1,500+ characters).
+6. Interaction: End with a question or '공감/댓글' request to encourage engagement.
+
 CRITICAL OUTPUT INSTRUCTION:
 After generating the content, you MUST append a JSON object containing analysis data. This JSON object must be separated from the content by the delimiter "---METADATA---".
 
-To calculate "viralScore", you MUST evaluate these 4 criteria step-by-step:
+The JSON object MUST contain a "platforms" key, where each sub-key is the EXACT platform header name used in the content (e.g., "Twitter Thread", "LinkedIn Post").
+
+For EACH platform, you MUST evaluate these 4 criteria step-by-step to calculate "viralScore":
 1. Hook (0-40 pts): Does the first line grab attention immediately?
 2. Value (0-30 pts): Is the content highly informative or entertaining?
 3. Structure (0-20 pts): Is it readable (bullet points, spacing)?
@@ -108,16 +138,21 @@ SUM these scores for the final "viralScore".
 
 The JSON structure:
 {
-  "viralScore": <number 0-100 (Sum of sub-scores)>,
-  "viralScoreReason": "Hook: [Score]/40, Value: [Score]/30, Structure: [Score]/20, CTA: [Score]/10. [한국어로 된 간략한 분석 코멘트]",
-  "decomposed": {
-    "hook": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
-    "value": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
-    "structure": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
-    "cta": {"score": <number>, "comment": "<string> (Brief Korean comment)"}
-  },
-  "keywords": ["<string>", "<string>", "..." (max 5 high-impact keywords)],
-  "seoTitle": "<string>"
+  "platforms": {
+    "<Exact Header Name>": {
+      "viralScore": <number 0-100>,
+      "viralScoreReason": "Hook: [Score]/40, Value: [Score]/30, Structure: [Score]/20, CTA: [Score]/10. [한국어로 된 간략한 분석 코멘트]",
+      "decomposed": {
+        "hook": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
+        "value": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
+        "structure": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
+        "cta": {"score": <number>, "comment": "<string> (Brief Korean comment)"}
+      },
+      "keywords": ["<string>", "<string>", "..." (max 10 high-impact keywords)],
+      "seoTitle": "<string>"
+    },
+    ... repeated for each platform ...
+  }
 }
 ENSURE THE JSON IS VALID. DO NOT WRAP IN MARKDOWN CODE BLOCKS.
 `;
@@ -190,6 +225,7 @@ ENSURE THE JSON IS VALID. DO NOT WRAP IN MARKDOWN CODE BLOCKS.
 - **Style Guide**: ${brand.style}
 - **Mandatory Keywords**: ${brand.keywords || 'None'}
 - **Forbidden Words**: ${brand.forbidden || 'None'}
+- **Target Audience**: ${brand.target || 'None'}
 
 ${brand.examples ? `**Example Sentences (Mimic this phrasing and rhythm):**\n${brand.examples}\n` : ''}
 `;
@@ -205,11 +241,18 @@ Your task is to repurpose the user's input into high-performing social media pos
 3. **Agency Quality**: Write professionally, but with high impact. Use hooks and patterns used by top creators.
 4. **Mandatory Keywords**: ALWAYS include identified mandatory keywords naturally if provided.
 5. **Character Limits**: STRICTLY adhere to platform character limits.
+6. **Naver Blog SEO**: If 'Naver Blog' is selected, you MUST:
+    - Put the main keyword at the beginning of the title.
+    - Use ## for Main Sections and ### for Sub-sections.
+    - Insert '[IMAGE: 관련 이미지 설명]' placeholders frequently.
+    - Provide long-form, detailed information (1,000+ characters).
+    - End by naturally encouraging engagement (comments/empathy).
 
 **Formatting**:
 - Output Language: ${language}
 - Use Markdown.
-- Separate platforms with "## [Platform Name]" headers.
+- Separate platforms with EXACTLY "## [Platform Name]" headers.
+- DO NOT use "##" for internal headers within a platform's content; use "###" or lower.
 
 ${brandInstruction}
 `;
@@ -222,25 +265,32 @@ ${brandInstruction}
 ### Final Analysis
 At the very end of the response, you MUST append a JSON object containing analysis data. This JSON object must be separated from the content by the delimiter "---METADATA---".
 
-To calculate "viralScore", you MUST evaluate these 4 criteria step-by-step:
+The JSON object MUST contain a "platforms" key, where each sub-key is the EXACT platform header name used in the content (e.g., "Twitter Thread", "LinkedIn Post").
+
+For EACH platform, you MUST evaluate these 4 criteria step-by-step to calculate its "viralScore":
 1. Hook (0-40 pts): Does the first line grab attention immediately?
 2. Value (0-30 pts): Is the content highly informative or entertaining?
 3. Structure (0-20 pts): Is it readable (bullet points, spacing)?
 4. CTA (0-10 pts): Is the Call-To-Action clear?
-SUM these scores for the final "viralScore".
+SUM these scores for its final "viralScore".
 
 The JSON structure:
 {
-  "viralScore": <number 0-100 (Sum of sub-scores)>,
-  "viralScoreReason": "Hook: [Score]/40, Value: [Score]/30, Structure: [Score]/20, CTA: [Score]/10. [한국어로 된 간략한 분석 코멘트]",
-  "decomposed": {
-    "hook": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
-    "value": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
-    "structure": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
-    "cta": {"score": <number>, "comment": "<string> (Brief Korean comment)"}
-  },
-  "keywords": ["<string>", "<string>", "..." (max 5 high-impact keywords)],
-  "seoTitle": "<string>"
+  "platforms": {
+    "<Exact Header Name>": {
+      "viralScore": <number 0-100>,
+      "viralScoreReason": "Hook: [Score]/40, Value: [Score]/30, Structure: [Score]/20, CTA: [Score]/10. [한국어로 된 간략한 분석 코멘트]",
+      "decomposed": {
+        "hook": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
+        "value": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
+        "structure": {"score": <number>, "comment": "<string> (Brief Korean comment)"},
+        "cta": {"score": <number>, "comment": "<string> (Brief Korean comment)"}
+      },
+      "keywords": ["<string>", "<string>", "..." (max 10 high-impact keywords)],
+      "seoTitle": "<string>"
+    },
+    ... repeated for each platform ...
+  }
 }
 ENSURE THE JSON IS VALID. DO NOT WRAP IN MARKDOWN CODE BLOCKS.
 

@@ -98,7 +98,7 @@ function initSettingsLogic() {
                 const confirmed = await window.showAppConfirm('API 키 삭제', 'Gemini API 키를 삭제하시겠습니까?');
                 if (confirmed) {
                     localStorage.removeItem('rep_api_key');
-                    window.aiService.setApiKey('AlzaSyB-arYE785mPj8q1lPusdesE7q9StF_PDA'); // Default
+                    window.aiService.setApiKey('AIzaSyB-arYE785mPj8q1lPusdesE7q9StF_PDA'); // Default
                     apiKeyInput.value = '';
                     statusIndicator.className = 'w-2 h-2 rounded-full bg-gray-300';
                     statusText.textContent = '상태 미확인';

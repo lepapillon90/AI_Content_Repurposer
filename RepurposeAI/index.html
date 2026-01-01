@@ -170,9 +170,25 @@
                                     <span class="step-badge w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black text-brand shrink-0">1</span>
                                     원본 콘텐츠 입수
                                 </h2>
-                                <button onclick="document.getElementById('input-text').value = ''" class="text-xs font-medium text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1">
-                                    <i data-lucide="trash-2" class="w-3 h-3"></i> 초기화
-                                </button>
+                                <div class="flex items-center gap-2">
+                                    <div class="relative">
+                                        <button id="load-history-btn" class="text-xs font-bold text-brand bg-brand/10 px-3 py-1.5 rounded-lg hover:bg-brand hover:text-white transition-all flex items-center gap-1.5">
+                                            <i data-lucide="history" class="w-3.5 h-3.5"></i> 최근 기록 불러오기
+                                        </button>
+                                        <!-- History Dropdown -->
+                                        <div id="history-dropdown" class="absolute right-0 mt-2 w-72 bg-white dark:bg-dark-card rounded-2xl shadow-2xl border border-gray-100 dark:border-dark-border py-2 hidden z-[9999] animate-fade-in-up">
+                                            <div class="px-4 py-2 border-b border-gray-50 dark:border-dark-border">
+                                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">최근 입력 기록</span>
+                                            </div>
+                                            <div id="history-dropdown-list" class="max-h-64 overflow-y-auto">
+                                                <!-- Items populated via JS -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onclick="document.getElementById('input-text').value = ''" class="text-xs font-medium text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1 px-2 py-1.5">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> 초기화
+                                    </button>
+                                </div>
                             </div>
 
                         <div class="relative group">
@@ -208,7 +224,7 @@
                                 </div>
                                 <div class="grid grid-cols-2 gap-3">
                                     <label class="platform-card cursor-pointer group">
-                                        <input type="radio" name="platform" value="twitter" class="absolute opacity-0" checked>
+                                        <input type="checkbox" name="platform" value="twitter" class="absolute opacity-0" checked>
                                         <div class="p-4 rounded-2xl border-2 border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 transition-all group-hover:border-brand/30">
                                             <div class="flex flex-col items-center gap-2 text-center">
                                                 <div class="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center">
@@ -220,7 +236,7 @@
                                     </label>
 
                                     <label class="platform-card cursor-pointer group">
-                                        <input type="radio" name="platform" value="linkedin" class="absolute opacity-0">
+                                        <input type="checkbox" name="platform" value="linkedin" class="absolute opacity-0">
                                         <div class="p-4 rounded-2xl border-2 border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 transition-all group-hover:border-brand/30">
                                             <div class="flex flex-col items-center gap-2 text-center">
                                                 <div class="w-10 h-10 rounded-xl bg-blue-600/10 text-blue-600 flex items-center justify-center">
@@ -232,7 +248,7 @@
                                     </label>
 
                                     <label class="platform-card cursor-pointer group">
-                                        <input type="radio" name="platform" value="naver_blog" class="absolute opacity-0">
+                                        <input type="checkbox" name="platform" value="naver_blog" class="absolute opacity-0">
                                         <div class="p-4 rounded-2xl border-2 border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 transition-all group-hover:border-brand/30">
                                             <div class="flex flex-col items-center gap-2 text-center">
                                                 <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
@@ -244,7 +260,7 @@
                                     </label>
 
                                     <label class="platform-card cursor-pointer group">
-                                        <input type="radio" name="platform" value="instagram_feed" class="absolute opacity-0">
+                                        <input type="checkbox" name="platform" value="instagram_feed" class="absolute opacity-0">
                                         <div class="p-4 rounded-2xl border-2 border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 transition-all group-hover:border-brand/30">
                                             <div class="flex flex-col items-center gap-2 text-center">
                                                 <div class="w-10 h-10 rounded-xl bg-pink-500/10 text-pink-500 flex items-center justify-center">
@@ -264,7 +280,7 @@
                                 </div>
                                 <div class="grid grid-cols-2 gap-3">
                                     <label class="platform-card cursor-pointer group">
-                                        <input type="radio" name="platform" value="youtube_shorts" class="absolute opacity-0">
+                                        <input type="checkbox" name="platform" value="youtube_shorts" class="absolute opacity-0">
                                         <div class="p-4 rounded-2xl border-2 border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 transition-all group-hover:border-brand/30">
                                             <div class="flex flex-col items-center gap-2 text-center">
                                                 <div class="w-10 h-10 rounded-xl bg-red-600/10 text-red-600 flex items-center justify-center">
@@ -276,7 +292,7 @@
                                     </label>
 
                                     <label class="platform-card cursor-pointer group">
-                                        <input type="radio" name="platform" value="instagram_reels" class="absolute opacity-0">
+                                        <input type="checkbox" name="platform" value="instagram_reels" class="absolute opacity-0">
                                         <div class="p-4 rounded-2xl border-2 border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 transition-all group-hover:border-brand/30">
                                             <div class="flex flex-col items-center gap-2 text-center">
                                                 <div class="w-10 h-10 rounded-xl bg-pink-600/10 text-pink-600 flex items-center justify-center">
@@ -288,7 +304,7 @@
                                     </label>
 
                                     <label class="platform-card cursor-pointer group">
-                                        <input type="radio" name="platform" value="tiktok" class="absolute opacity-0">
+                                        <input type="checkbox" name="platform" value="tiktok" class="absolute opacity-0">
                                         <div class="p-4 rounded-2xl border-2 border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 transition-all group-hover:border-brand/30">
                                             <div class="flex flex-col items-center gap-2 text-center">
                                                 <div class="w-10 h-10 rounded-xl bg-gray-900/10 dark:bg-white/10 text-gray-900 dark:text-white flex items-center justify-center">
@@ -319,16 +335,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- Tone/Style Selector -->
-                                    <div class="space-y-2">
-                                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">어조 및 스타일</label>
-                                        <select id="tone-select" class="w-full h-12 rounded-xl bg-gray-50 border border-gray-200 dark:bg-white/5 dark:border-white/10 px-4 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-brand/50 outline-none transition-all">
-                                            <option value="professional">전문적이고 권위있는</option>
-                                            <option value="friendly">친근하고 편안한</option>
-                                            <option value="witty">재치있고 유머러스한</option>
-                                            <option value="emotional">감성적이고 스토리 중심의</option>
-                                        </select>
-                                    </div>
+
 
                                     <!-- Language Selector -->
                                     <div class="space-y-2">
@@ -971,7 +978,25 @@
                                         Generated Content
                                     </h3>
                                     <div class="flex items-center gap-2">
-                                        <button id="widget-copy-content" class="px-3 py-1.5 bg-brand text-white text-xs font-bold rounded-lg hover:bg-brand-dark transition-all flex items-center gap-2">
+                                        <div class="flex items-center bg-gray-100 dark:bg-dark-card rounded-xl p-1 border border-gray-200 dark:border-dark-border mr-2 overflow-hidden shadow-sm">
+                                            <button onclick="document.execCommand('bold', false, null)" class="p-2 hover:bg-white dark:hover:bg-dark-bg text-gray-500 hover:text-brand transition-colors rounded-lg" title="Bold (Ctrl+B)">
+                                                <i data-lucide="bold" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                            <button onclick="document.execCommand('underline', false, null)" class="p-2 hover:bg-white dark:hover:bg-dark-bg text-gray-500 hover:text-brand transition-colors rounded-lg" title="Underline (Ctrl+U)">
+                                                <i data-lucide="underline" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                            <div class="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-1"></div>
+                                            <button onclick="document.execCommand('foreColor', false, '#ef4444')" class="p-2 hover:bg-white dark:hover:bg-dark-bg text-red-500 hover:scale-110 transition-all rounded-lg" title="Red Text">
+                                                <i data-lucide="palette" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                            <button onclick="document.execCommand('foreColor', false, '#3b82f6')" class="p-2 hover:bg-white dark:hover:bg-dark-bg text-blue-500 hover:scale-110 transition-all rounded-lg" title="Blue Text">
+                                                <i data-lucide="palette" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                            <button onclick="document.execCommand('foreColor', false, 'inherit')" class="p-2 hover:bg-white dark:hover:bg-dark-bg text-gray-400 hover:text-gray-900 transition-all rounded-lg" title="Reset Color">
+                                                <i data-lucide="eraser" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </div>
+                                        <button id="widget-copy-content" class="px-3 py-1.5 bg-brand text-white text-xs font-bold rounded-lg hover:bg-brand-dark transition-all flex items-center gap-2 shadow-sm">
                                             <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Content
                                         </button>
                                     </div>
@@ -1000,6 +1025,12 @@
                         </button>
                     </div>
                 </div>
+            </div>
+
+            <!-- Localized Widget Toast -->
+            <div id="widget-toast" class="absolute bottom-20 left-1/2 -translate-x-1/2 bg-gray-900/90 backdrop-blur-md text-white px-5 py-2.5 rounded-2xl shadow-xl text-xs font-bold opacity-0 transition-all duration-300 pointer-events-none z-[60] flex items-center gap-2 border border-white/10">
+                <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-green-400"></i>
+                <span id="widget-toast-text">복사되었습니다!</span>
             </div>
         </div>
     </div>

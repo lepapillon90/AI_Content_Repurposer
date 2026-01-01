@@ -263,6 +263,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
 
                         <div class="flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button class="repurpose-history-btn p-2 hover:bg-emerald-500 hover:text-white text-gray-400 rounded-lg transition-all" data-id="${item.id}" title="재가공하기">
+                                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                            </button>
                             <button class="view-history-detail p-2 hover:bg-brand hover:text-white text-gray-400 rounded-lg transition-all" data-id="${item.id}" title="상세보기">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
                             </button>
@@ -290,10 +293,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 const id = parseInt(e.currentTarget.dataset.id);
                 const item = history.find(h => h.id === id);
                 if (item) {
-                    widgetService.open(item.metadata, item.content);
+                    widgetService.open(item.metadata, item.content, item.id);
                 }
             };
         });
+
+        document.querySelectorAll('.repurpose-history-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                const id = parseInt(e.currentTarget.dataset.id);
+                handleRepurpose(id);
+            };
+        });
+
+        initHistorySelector();
+
+        // Add brandSelect change listener if it exists
+        const brandSelect = document.getElementById('brand-select');
+        if (brandSelect) {
+            brandSelect.onchange = (e) => {
+                window.brandService.setCurrentBrandId(e.target.value);
+            };
+        }
+    }
+
+    // Helper: Save to History
+    function saveToHistory(content, platform, originalInput, metadata) {
+        // if (!user) return null; // Allow guest saves for better UX
+
+        const history = JSON.parse(localStorage.getItem('rep_history') || '[]');
+        const newItem = {
+            id: Date.now(),
+            content: content,
+            originalInput: originalInput || '',
+            platform: platform,
+            metadata: metadata || null,
+            timestamp: new Date().toISOString()
+        };
+        history.push(newItem);
+        localStorage.setItem('rep_history', JSON.stringify(history));
+        return newItem.id;
     }
 
     async function deleteHistoryItem(id) {
@@ -315,22 +353,75 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Helper: Save to History
-    function saveToHistory(content, platform, originalInput, metadata) {
-        if (!user) return;
-
+    function handleRepurpose(id) {
         const history = JSON.parse(localStorage.getItem('rep_history') || '[]');
-        const newItem = {
-            id: Date.now(),
-            content: content,
-            originalInput: originalInput || '',
-            platform: platform,
-            metadata: metadata || null,
-            timestamp: new Date().toISOString()
-        };
-        history.push(newItem);
-        localStorage.setItem('rep_history', JSON.stringify(history));
+        const item = history.find(h => h.id === id);
+        if (item) {
+            const inputArea = document.getElementById('input-text');
+            if (inputArea) {
+                inputArea.value = item.originalInput || '';
+                // Navigation to Create view
+                window.location.hash = 'create';
+                showToast('기록에서 내용을 불러왔습니다. 수정 후 새로 생성해보세요!');
+            }
+        }
     }
+
+    function initHistorySelector() {
+        const loadBtn = document.getElementById('load-history-btn');
+        const dropdown = document.getElementById('history-dropdown');
+        const listContainer = document.getElementById('history-dropdown-list');
+        if (!loadBtn || !dropdown || !listContainer) return;
+
+        loadBtn.onclick = (e) => {
+            e.stopPropagation();
+            const history = JSON.parse(localStorage.getItem('rep_history') || '[]');
+            if (history.length === 0) {
+                listContainer.innerHTML = '<div class="px-4 py-8 text-center text-xs text-gray-400">최근 기록이 없습니다.</div>';
+            } else {
+                // Unique inputs only
+                const uniqueHistory = [];
+                const seen = new Set();
+                [...history].reverse().forEach(item => {
+                    const preview = item.originalInput.substring(0, 40);
+                    if (!seen.has(preview) && item.originalInput) {
+                        uniqueHistory.push(item);
+                        seen.add(preview);
+                    }
+                });
+
+                listContainer.innerHTML = uniqueHistory.slice(0, 5).map(item => `
+                    <button class="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors border-b border-gray-50 dark:border-dark-border last:border-0 history-select-item" data-id="${item.id}">
+                        <div class="flex flex-col gap-1">
+                            <span class="text-xs font-bold text-gray-700 dark:text-gray-200 line-clamp-1">${item.originalInput.substring(0, 50)}...</span>
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] text-gray-400">${new Date(item.timestamp).toLocaleDateString()}</span>
+                                <span class="text-[10px] font-bold text-brand uppercase">${item.platform}</span>
+                            </div>
+                        </div>
+                    </button>
+                `).join('');
+
+                document.querySelectorAll('.history-select-item').forEach(btn => {
+                    btn.onclick = () => {
+                        handleRepurpose(parseInt(btn.dataset.id));
+                        dropdown.classList.add('hidden');
+                    };
+                });
+            }
+            dropdown.classList.toggle('hidden');
+        };
+
+        // Initial call to populate if needed or just wait for click
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => {
+            dropdown.classList.add('hidden');
+        });
+        dropdown.onclick = (e) => e.stopPropagation();
+    }
+
+    // Call init on script load
+    initHistorySelector();
 
 
 
@@ -446,31 +537,32 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Content Generation (Only if elements exist) ---
     if (inputText && generateBtn) {
 
-        // 1. Character Count Update
-        inputText.addEventListener('input', (e) => {
-            const length = e.target.value.length;
-            if (charCount) charCount.textContent = length.toLocaleString();
+        // 1. Character Count & Button State Update
+        function updateGenerateButtonState() {
+            const text = inputText.value.trim();
+            const selectedPlatforms = Array.from(document.querySelectorAll('input[name="platform"]:checked'));
+            const isValid = text.length > 0 && selectedPlatforms.length > 0;
 
-            // Simple visual feedback if text is empty vs filled
-            if (length > 0) {
+            if (isValid) {
                 generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 generateBtn.disabled = false;
             } else {
                 generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 generateBtn.disabled = true;
             }
+
+            if (charCount) charCount.textContent = inputText.value.length.toLocaleString();
+        }
+
+        inputText.addEventListener('input', updateGenerateButtonState);
+
+        // Add listeners to platform checkboxes
+        document.querySelectorAll('input[name="platform"]').forEach(input => {
+            input.addEventListener('change', updateGenerateButtonState);
         });
 
         // Initialize button state
-        generateBtn.disabled = true;
-        generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
-
-        // Initial check
-        if (inputText.value.length > 0) {
-            if (charCount) charCount.textContent = inputText.value.length.toLocaleString();
-            generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            generateBtn.disabled = false;
-        }
+        updateGenerateButtonState();
 
 
         // 2. Generate Action
@@ -562,7 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Recommended Tags (Keywords)
             if (keywordsContainer) {
                 if (data.keywords && data.keywords.length > 0) {
-                    keywordsContainer.innerHTML = data.keywords.slice(0, 8).map(k =>
+                    keywordsContainer.innerHTML = data.keywords.slice(0, 10).map(k =>
                         `<span class="px-2 py-0.5 bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-md text-[10px] text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap shadow-sm">
                             #${k}
                         </span>`
@@ -665,10 +757,12 @@ document.addEventListener('DOMContentLoaded', () => {
             metadata: null,
             results: {},
             currentPlatform: null,
+            historyId: null,
 
-            open: function (metadata, generatedContent) {
+            open: function (metadata, generatedContent, historyId = null, selectedPlatforms = []) {
                 this.metadata = metadata;
-                this.results = this.parseResults(generatedContent);
+                this.historyId = historyId;
+                this.results = this.parseResults(generatedContent, selectedPlatforms);
 
                 const widget = document.getElementById('result-widget');
                 const container = document.getElementById('widget-container');
@@ -717,33 +811,105 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 400);
             },
 
-            parseResults: function (content) {
+            parseResults: function (content, selectedPlatforms = []) {
                 const results = {};
-                // Split by "## [Platform Name]" headers
-                const sections = content.split(/^##\s+/m);
 
-                sections.forEach(section => {
-                    if (!section.trim()) return;
+                // 1. Pre-clean: Remove common AI wrappers
+                let cleanContent = content.trim();
+                if (cleanContent.startsWith('```')) {
+                    cleanContent = cleanContent.replace(/^```[a-z]*\n/i, '').replace(/\n```$/m, '').trim();
+                }
 
-                    const lines = section.split('\n');
-                    const title = lines[0].trim();
-                    const body = lines.slice(1).join('\n').trim();
+                const platformNames = [
+                    'Twitter Thread', 'Twitter',
+                    'LinkedIn Post', 'LinkedIn',
+                    'Instagram Caption', 'Instagram Reels Script', 'Instagram Reels', 'Instagram Feed Post', 'Instagram Feed', 'Instagram',
+                    'Naver Blog Post', 'Naver Blog',
+                    'YouTube Shorts Script', 'YouTube Shorts', 'YouTube Script', 'YouTube',
+                    'TikTok Script', 'TikTok',
+                    'Facebook Post', 'Facebook',
+                    'Threads', 'Short-form Script'
+                ];
 
-                    if (title && body) {
-                        results[title] = body;
+                const displayMap = {
+                    'twitter': 'Twitter Thread',
+                    'linkedin': 'LinkedIn Post',
+                    'instagram': 'Instagram Caption',
+                    'instagram-feed': 'Instagram Feed',
+                    'naver-blog': 'Naver Blog Post',
+                    'youtube-shorts': 'YouTube Shorts Script',
+                    'youtube': 'YouTube Script',
+                    'tiktok': 'TikTok Script',
+                    'facebook': 'Facebook Post',
+                    'threads': 'Threads'
+                };
+
+                // Split by the specific platform headers (## Header or ##Header)
+                const splitContent = cleanContent.split(/^##\s*/m);
+
+                splitContent.forEach((section, index) => {
+                    const trimmedSection = section.trim();
+                    if (!trimmedSection) return;
+
+                    const lines = trimmedSection.split('\n');
+                    const firstLine = lines[0].trim();
+
+                    // Check if the First Line matches any platform name
+                    const matchedPlatform = platformNames.find(p =>
+                        firstLine.toLowerCase().startsWith(p.toLowerCase()) ||
+                        p.toLowerCase().startsWith(firstLine.toLowerCase())
+                    );
+
+                    if (matchedPlatform || (firstLine.length < 30 && !firstLine.includes(' '))) {
+                        const key = matchedPlatform || firstLine;
+                        const body = lines.slice(1).join('\n').trim();
+                        results[key] = (results[key] ? results[key] + '\n\n' : '') + body;
+                    } else if (index === 0 && selectedPlatforms.length === 1) {
+                        // If it's the first block and only one platform selected, assume it's that platform
+                        const key = displayMap[selectedPlatforms[0]] || selectedPlatforms[0];
+                        results[key] = (results[key] ? results[key] + '\n\n' : '') + trimmedSection;
+                    } else if (Object.keys(results).length > 0) {
+                        const keys = Object.keys(results);
+                        const lastKey = keys[keys.length - 1];
+                        results[lastKey] += '\n\n## ' + trimmedSection;
+                    } else {
+                        // Truly unknown, default to first selected platform if available
+                        const key = (selectedPlatforms && selectedPlatforms[0] && displayMap[selectedPlatforms[0]]) || selectedPlatforms[0] || 'Generated Content';
+                        results[key] = (results[key] ? results[key] + '\n\n' : '') + trimmedSection;
                     }
                 });
 
-                // Fallback for single platform without header
-                if (Object.keys(results).length === 0 && content.trim()) {
-                    results['Generated Content'] = content.trim();
+                // Final Fallback for empty results
+                if (Object.keys(results).length === 0 && cleanContent) {
+                    const key = (selectedPlatforms && selectedPlatforms[0] && displayMap[selectedPlatforms[0]]) || selectedPlatforms[0] || 'Generated Content';
+                    results[key] = cleanContent;
                 }
 
+                console.log('Parsed Results Platforms:', Object.keys(results));
                 return results;
             },
 
             renderAnalytics: function () {
-                const data = this.metadata || {};
+                let data = this.metadata || {};
+
+                // If per-platform metadata exists, use it for the current platform
+                if (data.platforms && this.currentPlatform) {
+                    if (data.platforms[this.currentPlatform]) {
+                        data = data.platforms[this.currentPlatform];
+                    } else if (this.currentPlatform === 'Generated Content') {
+                        // If fallback platform is used, pick the first available metadata platform
+                        const firstKey = Object.keys(data.platforms)[0];
+                        if (firstKey) data = data.platforms[firstKey];
+                    } else {
+                        // Fuzzy match for platform names
+                        const platformKey = Object.keys(data.platforms).find(k =>
+                            k.toLowerCase().includes(this.currentPlatform.toLowerCase()) ||
+                            this.currentPlatform.toLowerCase().includes(k.toLowerCase())
+                        );
+                        if (platformKey) data = data.platforms[platformKey];
+                    }
+                }
+
                 renderAnalysisWidget(data, true); // true for isWidget
             },
 
@@ -770,11 +936,61 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Update Tabs
                 this.renderTabs();
 
+                // Update Analytics for this platform
+                this.renderAnalytics();
+
                 // Update Editor
                 if (editor && content) {
-                    // Use marked for preview, but we might want RAW for editing.
-                    // For now, let's show MD rendered preview in the editor-like area.
                     editor.innerHTML = marked.parse(content);
+                }
+            },
+
+            saveChanges: function () {
+                const editor = document.getElementById('widget-editor');
+                if (!editor || !this.currentPlatform) return;
+
+                const newContent = editor.innerHTML;
+                this.results[this.currentPlatform] = newContent;
+
+                if (this.historyId) {
+                    const history = JSON.parse(localStorage.getItem('rep_history') || '[]');
+                    const idx = history.findIndex(h => h.id === this.historyId);
+                    if (idx !== -1) {
+                        history[idx].content = newContent;
+                        // Also update metadata if changed (like SEO Title)
+                        history[idx].metadata = this.metadata;
+                        localStorage.setItem('rep_history', JSON.stringify(history));
+
+                        // Update dashboard list if we are there
+                        if (window.loadHistory) window.loadHistory();
+                        showWidgetToast('변경사항이 저장되었습니다!');
+                    }
+                } else {
+                    showWidgetToast('먼저 히스토리에 저장되어야 합니다.');
+                }
+            },
+
+            shareContent: function () {
+                const editor = document.getElementById('widget-editor');
+                if (!editor) return;
+
+                const text = editor.innerText;
+                const title = document.getElementById('widget-seo-title')?.innerText || 'AI Generated Content';
+
+                if (navigator.share) {
+                    navigator.share({
+                        title: title,
+                        text: text
+                    }).then(() => {
+                        showWidgetToast('성공적으로 공유되었습니다!');
+                    }).catch(err => {
+                        console.error('Share failed:', err);
+                    });
+                } else {
+                    // Fallback to copy content
+                    navigator.clipboard.writeText(text).then(() => {
+                        showWidgetToast('결과를 클립보드에 복사했습니다!');
+                    });
                 }
             }
         };
@@ -786,22 +1002,50 @@ document.addEventListener('DOMContentLoaded', () => {
         const backdrop = document.getElementById('widget-backdrop');
         if (backdrop) backdrop.addEventListener('click', () => window.widgetService.close());
 
+        const saveWidgetBtn = document.getElementById('widget-save-btn');
+        if (saveWidgetBtn) saveWidgetBtn.addEventListener('click', () => window.widgetService.saveChanges());
+
+        const shareWidgetBtn = document.getElementById('widget-share-btn');
+        if (shareWidgetBtn) shareWidgetBtn.addEventListener('click', () => window.widgetService.shareContent());
+
         document.getElementById('widget-copy-content').addEventListener('click', () => {
             const editor = document.getElementById('widget-editor');
             if (editor) {
-                // Get innerText to strip HTML tags if needed, or just keep as is
-                const text = editor.innerText;
-                navigator.clipboard.writeText(text).then(() => {
-                    showToast('콘텐츠가 복사되었습니다!');
-                });
+                // For rich text support (Naver Blog etc.)
+                const htmlContent = editor.innerHTML;
+                const textContent = editor.innerText;
+
+                try {
+                    const blobHtml = new Blob([htmlContent], { type: 'text/html' });
+                    const blobText = new Blob([textContent], { type: 'text/plain' });
+                    const data = [new ClipboardItem({
+                        'text/html': blobHtml,
+                        'text/plain': blobText
+                    })];
+
+                    navigator.clipboard.write(data).then(() => {
+                        showWidgetToast('서식이 포함된 콘텐츠가 복사되었습니다!');
+                    });
+                } catch (err) {
+                    // Fallback to plain text if ClipboardItem fails
+                    navigator.clipboard.writeText(textContent).then(() => {
+                        showWidgetToast('콘텐츠가 복사되었습니다!');
+                    });
+                }
             }
         });
 
         document.getElementById('widget-copy-keywords').addEventListener('click', () => {
-            if (window.widgetService.metadata?.keywords) {
-                const tags = window.widgetService.metadata.keywords.join(' ');
-                navigator.clipboard.writeText(tags).then(() => {
-                    showToast('키워드가 복사되었습니다!');
+            const data = window.widgetService.metadata || {};
+            let keywords = [];
+
+            if (data.platforms && window.widgetService.currentPlatform && data.platforms[window.widgetService.currentPlatform]) {
+                keywords = data.platforms[window.widgetService.currentPlatform].keywords || [];
+            }
+
+            if (keywords.length > 0) {
+                navigator.clipboard.writeText(keywords.join(', ')).then(() => {
+                    showWidgetToast('키워드가 복사되었습니다!');
                 });
             }
         });
@@ -881,7 +1125,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const selectedLanguage = languageSelect ? languageSelect.value : 'Korean';
 
                 // Get Selected Brand or Custom Tone
-                const toneSelect = document.getElementById('tone-select');
                 const brandSelect = document.getElementById('brand-select');
                 let brandInput = null;
 
@@ -902,12 +1145,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (!brandInput) {
-                    // 2. Fallback to Manual Tone Selection (Custom)
-                    const selectedTone = toneSelect ? toneSelect.value : 'professional';
+                    // 2. Default to Professional if no brand is selected
                     brandInput = {
-                        name: 'Custom Tone',
-                        tone: selectedTone.charAt(0).toUpperCase() + selectedTone.slice(1),
-                        style: `${selectedTone} Style`,
+                        name: 'Professional',
+                        tone: 'Professional & Authoritative',
+                        style: 'Professional business style',
                         keywords: '',
                         forbidden: ''
                     };
@@ -922,8 +1164,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 let generatedContent = rawContent;
                 let metadata = null;
 
-                if (rawContent.includes(metadataSeparator)) {
-                    const parts = rawContent.split(metadataSeparator);
+                // Pre-clean rawContent if it's wrapped in a global code block
+                let cleanRaw = rawContent.trim();
+                if (cleanRaw.startsWith('```')) {
+                    cleanRaw = cleanRaw.replace(/^```[a-z]*\n/i, '').replace(/\n```$/m, '').trim();
+                }
+
+                if (cleanRaw.includes(metadataSeparator)) {
+                    const parts = cleanRaw.split(metadataSeparator);
                     generatedContent = parts[0].trim();
                     try {
                         let jsonStr = parts[1].trim();
@@ -935,21 +1183,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
+                // Save to History FIRST to get an ID
+                const platformLabel = selectedPlatforms.length > 1 ? 'Multi-Platform' : selectedPlatforms[0];
+                const newId = saveToHistory(generatedContent, platformLabel, text, metadata);
+
                 if (window.widgetService) {
-                    window.widgetService.open(metadata, generatedContent);
+                    window.widgetService.open(metadata, generatedContent, newId, selectedPlatforms);
                 }
 
                 showToast('생성이 완료되었습니다! 위젯에서 편집을 계속하세요.', 3000);
-
-                // Save to History
-                const platformLabel = selectedPlatforms.length > 1 ? 'Multi-Platform' : selectedPlatforms[0];
-                saveToHistory(generatedContent, platformLabel, text, metadata);
 
 
 
             } catch (error) {
                 console.error('Generation failed:', error);
-                showToast('생성에 실패했습니다.', 'error');
+                showToast(`생성에 실패했습니다: ${error.message}`, 'error');
             } finally {
                 // UI: Stop Loading
                 setLoadingState(false);
@@ -1002,6 +1250,21 @@ document.addEventListener('DOMContentLoaded', () => {
             toast.classList.add('translate-y-4'); // Slide down
         }, duration);
         lucide.createIcons();
+    }
+
+    function showWidgetToast(message, duration = 2000) {
+        const wToast = document.getElementById('widget-toast');
+        const wToastText = document.getElementById('widget-toast-text');
+        if (!wToast || !wToastText) return;
+
+        wToastText.innerText = message;
+        wToast.classList.remove('opacity-0', 'pointer-events-none');
+        wToast.classList.add('opacity-100');
+
+        setTimeout(() => {
+            wToast.classList.remove('opacity-100');
+            wToast.classList.add('opacity-0', 'pointer-events-none');
+        }, duration);
     }
 
 
