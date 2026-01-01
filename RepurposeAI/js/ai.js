@@ -232,27 +232,31 @@ ${brand.examples ? `**Example Sentences (Mimic this phrasing and rhythm):**\n${b
         }
 
         let taskInstruction = `
-You are a world-class Content Marketing AI Agent specialized in Multi-Platform Repurposing.
-Your task is to repurpose the user's input into high-performing social media posts for: ${platforms.join(', ')}.
+You are a World-Class Visual Storytelling Expert and Content Marketing Master.
+Your task is to repurpose the user's input into high-performing, visually engaging social media content for: ${platforms.join(', ')}.
+
+**Visual Storytelling Rules (STRICT COMPLIANCE REQUIRED)**:
+1. **Strategic Impact**: Identify the point of maximum emotional or visual impact (usually immediately after a hook or right before a key reveal/twist).
+2. **Inline Image Tags**: Insert exactly ONE [IMAGE: "detailed description"] tag at that identified location.
+3. **Advanced Prompting for Nano Banana**: The description inside the tag must follow this format: "[Subject, Background, Lighting, Style]".
+    - **CRITICAL**: For the image description, you MUST append this suffix: ", high-end advertising photography, cinematic lighting, sharp focus, professional color grading, minimalist composition, trending on artstation, masterpiece, 8k resolution, (no text, no watermark)".
+    - *Example*: "인공지능의 미래는 밝습니다. [IMAGE: 고층 빌딩 숲 위로 떠오르는 거대한 홀로그램 뇌, 네온 블루 조명, 사이버펑크 스타일, high-end advertising photography, cinematic lighting, sharp focus, professional color grading, minimalist composition, trending on artstation, masterpiece, 8k resolution, (no text, no watermark)] 이 기술을 선점하는 자가..."
 
 **Core Directives**:
-1. **Tone Consistency**: If a Brand Profile is provided, reflect its personality perfectly.
+1. **Tone Consistency**: Reflect the Brand Profile (if provided) perfectly.
 2. **Platform Native**: Each output must feel native to the platform (formatting, length, visual cues).
-3. **Agency Quality**: Write professionally, but with high impact. Use hooks and patterns used by top creators.
-4. **Mandatory Keywords**: ALWAYS include identified mandatory keywords naturally if provided.
-5. **Character Limits**: STRICTLY adhere to platform character limits.
-6. **Naver Blog SEO**: If 'Naver Blog' is selected, you MUST:
-    - Put the main keyword at the beginning of the title.
+3. **Automatic Highlighting**: Use HTML tags (<b>, <u>, <span style="color:red">) ONLY for emphasis. DO NOT use markdown asterisks.
+4. **Naver Blog SEO**: 
+    - Put primary keyword at the very beginning of the title.
     - Use ## for Main Sections and ### for Sub-sections.
-    - Insert '[IMAGE: 관련 이미지 설명]' placeholders frequently.
-    - Provide long-form, detailed information (1,000+ characters).
-    - End by naturally encouraging engagement (comments/empathy).
-
-**Formatting**:
-- Output Language: ${language}
-- Use Markdown.
-- Separate platforms with EXACTLY "## [Platform Name]" headers.
-- DO NOT use "##" for internal headers within a platform's content; use "###" or lower.
+    - Insert [IMAGE:] tags approx. every 2-3 paragraphs.
+    - End with '공감/댓글' request.
+5. **Video Platforms (Shorts, Reels, TikTok)**: Use the Scene-based structure provided in the platform instructions.
+6. **Strict Formatting**: 
+    - Output Language: ${language}
+    - Use Markdown.
+    - Separate platforms with EXACTLY "## [Platform Name]" headers.
+    - DO NOT use "##" for internal headers; use "###" or lower.
 
 ${brandInstruction}
 `;
@@ -317,8 +321,13 @@ ENSURE THE JSON IS VALID. DO NOT WRAP IN MARKDOWN CODE BLOCKS.
 - **Tone**: Thought-leadership, professional but conversational.
 `,
             instagram: `
-#### Instagram Reels & Caption Rules:
+#### Instagram Reels Script Rules:
 - Header: ## Instagram Reels Script
+- **Structure**: MANDATORY Scene-based layout:
+    - **Scene 1: 오프닝 (5초)** - 강력한 후킹으로 시선 고정
+    - **Scene 2: 문제 제시 (5초)** - 핵심 페인포인트나 공감대 형성
+    - **Scene 3: 해결 과정 (10초)** - 본문 내용 및 해결책 제시
+    - **Scene 4: 결과/Call-to-Action (10초)** - 변화된 모습 및 행동 유도
 - **Format**: USE A TABLE for the script with columns: [Scene, Time, Visual, Audio, Text Overlay].
 - **Visuals**: Be highly descriptive (e.g., "Fast cut to...").
 - **Audio**: Specify trending audio feel or voiceover tone.
@@ -329,18 +338,27 @@ ENSURE THE JSON IS VALID. DO NOT WRAP IN MARKDOWN CODE BLOCKS.
 #### YouTube Shorts Script Rules:
 - Header: ## YouTube Shorts Script
 - **3 Hook Options**: Provide 3 different strong hook variations at the start.
+- **Structure**: MANDATORY Scene-based layout:
+    - **Scene 1: 오프닝 (5초)** - 강력한 후킹으로 시선 고정
+    - **Scene 2: 문제 제시 (5초)** - 핵심 페인포인트나 공감대 형성
+    - **Scene 3: 해결 과정 (10초)** - 본문 내용 및 해결책 제시
+    - **Scene 4: 결과/Call-to-Action (10초)** - 변화된 모습 및 행동 유도
 - **Format**: USE A STRICT TABLE format:
-  | Time | Visual (Detailed) | Audio (Narration) | Text Overlay |
-  |------|-------------------|-------------------|--------------|
-  | 0-3s | [Visual Description] | [Hook Line] | [Big Text] |
+  | Scene | Time | Visual (Detailed) | Audio (Narration) | Text Overlay |
+  |-------|------|-------------------|-------------------|--------------|
 - **Pacing**: Fast cuts every 2-3 seconds.
 - **Retention**: Visuals must change frequently to maintain attention.
-- **CTA**: Clear call-to-action in the last 5 seconds.
+- **CTA**: Clear call-to-action in the last Scene.
 `,
             tiktok: `
 #### TikTok Script Rules:
 - Header: ## TikTok Script
-- **Format**: USE A TABLE format: [Time, Visual, Audio, Text].
+- **Structure**: MANDATORY Scene-based layout:
+    - **Scene 1: 오프닝 (5초)** - 강력한 후킹으로 시선 고정
+    - **Scene 2: 문제 제시 (5초)** - 핵심 페인포인트나 공감대 형성
+    - **Scene 3: 해결 과정 (10초)** - 본문 내용 및 해결책 제시
+    - **Scene 4: 결과/Call-to-Action (10초)** - 변화된 모습 및 행동 유도
+- **Format**: USE A TABLE format: [Scene, Time, Visual, Audio, Text].
 - **Hook**: First 3 seconds are critical. Start with a visual disruption or strong statement.
 - **Style**: High energy, raw, authentic feel.
 - **Engagement**: Explicit instructions for stickers or "Link in bio" pointers.
@@ -388,8 +406,11 @@ ENSURE THE JSON IS VALID. DO NOT WRAP IN MARKDOWN CODE BLOCKS.
         }
     }
 
-    async callGemini(promptText) {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
+    async callGemini(promptText, isImage = false) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${isImage ? 'gemini-2.0-flash-exp' : this.model}:generateContent?key=${this.apiKey}`;
+        // Note: For image generation, the system prompt or model selection needs to be specific.
+        // Current Gemini models in Vertex/AI Studio use specific endpoints or configurations for Imagen.
+        // For 'gemini-2.0-flash-exp', it supports multimodal input/output but image generation might need specific instructions.
 
         try {
             const response = await fetch(url, {
@@ -406,9 +427,71 @@ ENSURE THE JSON IS VALID. DO NOT WRAP IN MARKDOWN CODE BLOCKS.
             }
 
             const data = await response.json();
+
+            // Handle image response if applicable (Gemini 2.0 can generate images in some configurations)
+            // If it returns text instructions for image generation, we might need a separate call to an Imagen model.
+            // For now, assuming standard text response or specific multimodal response.
             return data.candidates[0].content.parts[0].text;
         } catch (e) {
             console.error(e);
+            throw e;
+        }
+    }
+
+    /**
+     * Generate an image using Google's Nano Banana (Imagen 3 / Gemini 2.0)
+     */
+    async generateImage(prompt) {
+        if (!this.apiKey) throw new Error('GEMINI_API_KEY_MISSING');
+
+        // Note: Direct image generation via gemini-2.0-flash-exp generateContent 
+        // usually returns a specific part type if configured for image output.
+        // For Vertex AI, the model is 'imagen-3.0-generate-001'.
+        // For Gemini API (AI Studio), image generation is often handled within the same flow.
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${this.apiKey}`;
+
+        const body = {
+            contents: [{
+                parts: [{
+                    text: `Generate a high-quality, professional image based on this description. 
+                    Objective: Content marketing asset.
+                    Style: Clean, modern, high-resolution. 
+                    Description: ${prompt}`
+                }]
+            }],
+            generationConfig: {
+                // Some versions use response_mime_type: "image/png" or similar
+            }
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || 'Image Generation Failed');
+            }
+
+            const data = await response.json();
+
+            // Check for inlineData (Base64 image) in the response parts
+            const parts = data.candidates[0].content.parts;
+            const imagePart = parts.find(p => p.inlineData && p.inlineData.mimeType.startsWith('image/'));
+
+            if (imagePart) {
+                return `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
+            }
+
+            // Fallback: If it only returned text (meaning image generation isn't enabled or failed to trigger)
+            console.warn('Image part not found in Gemini response. It may have returned text instead.');
+            return null;
+        } catch (e) {
+            console.error('generateImage Error:', e);
             throw e;
         }
     }

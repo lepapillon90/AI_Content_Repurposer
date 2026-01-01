@@ -42,7 +42,6 @@ function initSettingsLogic() {
     }
 
     // --- Gemini Settings ---
-    // --- Gemini Settings ---
     const apiKeyInput = document.getElementById('gemini-api-key');
     const saveKeyBtn = document.getElementById('save-gemini-key-btn');
     const deleteKeyBtn = document.getElementById('delete-gemini-key-btn');
@@ -237,13 +236,25 @@ function initSettingsLogic() {
             if (confirmed) {
                 localStorage.removeItem('rep_history');
                 showToast('모든 기록이 삭제되었습니다.');
-                // Trigger global event or manually reload if needed, 
-                // but since history is loaded dynamically on view switch, 
-                // we might just need to clear UI if currently viewing it.
                 if (window.location.hash === '#dashboard' && window.loadHistory) {
                     window.loadHistory();
                 }
             }
+        });
+    }
+
+    // --- AI Image Generation Toggle ---
+    const imageGenToggle = document.getElementById('auto-image-gen-toggle');
+    if (imageGenToggle) {
+        // Load Saved State
+        const savedAutoImage = localStorage.getItem('rep_auto_image_gen') === 'true';
+        imageGenToggle.checked = savedAutoImage;
+
+        // Change Event
+        imageGenToggle.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            localStorage.setItem('rep_auto_image_gen', isChecked);
+            showToast(`AI 이미지 자동 생성이 ${isChecked ? '활성화' : '비활성화'}되었습니다.`, 'info');
         });
     }
 }

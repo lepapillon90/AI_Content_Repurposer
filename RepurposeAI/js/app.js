@@ -564,6 +564,24 @@ document.addEventListener('DOMContentLoaded', () => {
         // Initialize button state
         updateGenerateButtonState();
 
+        // 1.1 Clear Generation Inputs Helper
+        function clearGenerationInputs() {
+            if (inputText) {
+                inputText.value = '';
+            }
+
+            // Uncheck all platforms
+            document.querySelectorAll('input[name="platform"]').forEach(input => {
+                input.checked = false;
+            });
+
+            // Refresh UI state
+            updateGenerateButtonState();
+
+            // Refresh character count explicitly
+            if (charCount) charCount.textContent = '0';
+        }
+
 
         // 2. Generate Action
         let isGenerating = false;
@@ -1191,7 +1209,88 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.widgetService.open(metadata, generatedContent, newId, selectedPlatforms);
                 }
 
-                showToast('생성이 완료되었습니다! 위젯에서 편집을 계속하세요.', 3000);
+                showToast('텍스트 생성 완료! 이미지 생성 여부를 확인합니다.', 2000);
+
+                // --- AI Image Auto Generation Logic ---
+                const autoImageEnabled = localStorage.getItem('rep_auto_image_gen') === 'true';
+                const imagePlaceholderRegex = /\[IMAGE:\s*(.*?)\]/g;
+                const hasPlaceholders = imagePlaceholderRegex.test(generatedContent);
+
+                if (autoImageEnabled && hasPlaceholders) {
+                    showToast('AI 이미지를 생성 중입니다... (잠시만 기다려주세요)', 'info', 5000);
+
+                    // Re-run regex to get all matches
+                    imagePlaceholderRegex.lastIndex = 0;
+                    let match;
+                    let updatedContent = generatedContent;
+                    const promises = [];
+                    let imageCounter = 0;
+
+                    while ((match = imagePlaceholderRegex.exec(generatedContent)) !== null) {
+                        const fullMatch = match[0];
+                        const prompt = match[1].trim();
+                        const currentId = newId;
+                        const currentIndex = imageCounter++;
+
+                        // Create a promise for each image generation
+                        const promise = window.aiService.generateImage(prompt)
+                            .then(base64Image => {
+                                if (base64Image) {
+                                    const imgTag = `
+                                        <div class="ai-inline-image-container my-8 animate-fade-in">
+                                            <div class="ai-image-section group relative overflow-hidden rounded-2xl shadow-xl">
+                                                <img src="${base64Image}" alt="${prompt}" class="w-full h-auto max-h-[600px] object-cover transition-transform duration-500 group-hover:scale-105">
+                                                <div class="image-actions absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                    <button onclick="window.downloadAIImage('${base64Image}', 'ai_image_${currentId}_${currentIndex}.png')" class="download-btn bg-white/95 backdrop-blur text-gray-800 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-lg border border-gray-200/50 hover:bg-white transition-all">
+                                                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                                                        고화질 저장
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <p class="text-[10px] text-gray-400 mt-3 text-center italic tracking-wider">AI Storytelling Asset by Nano Banana</p>
+                                        </div>`;
+                                    updatedContent = updatedContent.replace(fullMatch, imgTag);
+                                }
+                            })
+                            .catch(err => {
+                                console.error('Image Gen Error for:', prompt, err);
+                                updatedContent = updatedContent.replace(fullMatch, `<div class="p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-red-500 font-medium my-4">⚠️ 이미지 생성 실패: ${prompt}</div>`);
+                            });
+                        promises.push(promise);
+                    }
+
+                    // Wait for all images to be generated
+                    await Promise.all(promises);
+
+                    // Update UI and History
+                    if (window.widgetService) {
+                        window.widgetService.rawContent = updatedContent;
+                        if (window.widgetService.isOpen) {
+                            const editor = document.getElementById('widget-editor');
+                            if (editor) {
+                                editor.innerHTML = marked.parse(updatedContent);
+                                lucide.createIcons();
+                            }
+                        }
+                    }
+
+                    // Update history record
+                    const history = JSON.parse(localStorage.getItem('rep_history') || '[]');
+                    const idx = history.findIndex(h => h.id === newId);
+                    if (idx !== -1) {
+                        history[idx].content = updatedContent;
+                        localStorage.setItem('rep_history', JSON.stringify(history));
+                    }
+
+                    showToast('AI 이미지 스토리텔링이 완성되었습니다!', 'success');
+                } else if (hasPlaceholders && !autoImageEnabled) {
+                    showToast('이미지 자리표시자가 감지되었습니다. 설정을 확인해보세요!', 'info');
+                } else {
+                    showToast('생성이 완료되었습니다!', 'success');
+                }
+
+                // --- Auto Reset Feature ---
+                clearGenerationInputs();
 
 
 
@@ -1651,3 +1750,62 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 50);
 
 }); // End of DOMContentLoaded
+
+// --- Global Helper for Image Download ---
+window.downloadAIImage = function (base64Data, filename) {
+    const link = document.createElement('a');
+    link.href = base64Data;
+    link.download = filename || 'repurpose_ai_image.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('이미지 다운로드가 시작되었습니다.', 'success');
+};
+
+// --- Enhanced Widget Service Integration ---
+// Make sure widgetService can handle pre-rendered images from history
+const originalWidgetOpen = window.widgetService ? window.widgetService.open.bind(window.widgetService) : null;
+if (window.widgetService) {
+    window.widgetService.open = function (metadata, content, historyId, platforms) {
+        // Find entry in history to check for images
+        const history = JSON.parse(localStorage.getItem('rep_history') || '[]');
+        const entry = history.find(h => h.id === historyId);
+
+        originalWidgetOpen(metadata, content, historyId, platforms);
+
+        // If entry has images and they aren't already in the content, append them
+        if (entry && entry.recommendedImages && entry.recommendedImages.length > 0) {
+            if (!content.includes('ai-image-container')) {
+                let imagesHTML = `
+                        <div id="ai-image-container" class="mt-8 pt-8 border-t border-gray-100 dark:border-dark-border">
+                            <h3 class="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+                                <i data-lucide="sparkles" class="w-4 h-4 text-brand"></i>
+                                저장된 AI 이미지
+                            </h3>
+                            <div class="grid grid-cols-1 gap-6">`;
+
+                entry.recommendedImages.forEach((img, i) => {
+                    imagesHTML += `
+                            <div class="ai-image-section group">
+                                <img src="${img}" class="w-full h-auto max-h-[500px] object-cover">
+                                <div class="image-actions">
+                                    <button onclick="window.downloadAIImage('${img}', 'ai_image_${historyId}_${i}.png')" class="download-btn shadow-xl">
+                                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                                        고화질 저장
+                                    </button>
+                                </div>
+                            </div>`;
+                });
+                imagesHTML += `</div></div>`;
+
+                setTimeout(() => {
+                    const editor = document.getElementById('widget-editor');
+                    if (editor) {
+                        editor.innerHTML += imagesHTML;
+                        lucide.createIcons();
+                    }
+                }, 100);
+            }
+        }
+    };
+}
