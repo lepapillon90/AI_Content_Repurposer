@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const id = parseInt(e.currentTarget.dataset.id);
                 const item = history.find(h => h.id === id);
                 if (item) {
-                    widgetService.open(item.content, item.platform, item.metadata);
+                    widgetService.open(item.metadata, item.content);
                 }
             };
         });
@@ -433,6 +433,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Call once on load
     updateAuthUI();
 
+    // Initial Brand Population
+    if (typeof populateBrandDropdown === 'function') {
+        populateBrandDropdown();
+    }
+
 
 
 
@@ -525,29 +530,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 reason.textContent = cleanReason.trim();
             }
 
-            // Decomposed Pillar Badges
+            // Decomposed Pillar Badges (New Colorful Pills)
             if (pillarsContainer) {
                 if (data.decomposed) {
                     const d = data.decomposed;
                     const pillars = [
-                        { key: 'hook', label: 'Hook', icon: 'zap', class: 'badge-hook', val: d.hook },
-                        { key: 'value', label: 'Value', icon: 'lightbulb', class: 'badge-value', val: d.value },
-                        { key: 'structure', label: 'Structure', icon: 'layout', class: 'badge-structure', val: d.structure },
-                        { key: 'cta', label: 'CTA', icon: 'mouse-pointer-2', class: 'badge-cta', val: d.cta }
+                        { key: 'hook', label: 'Hook', icon: 'zap', style: 'bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800', val: d.hook },
+                        { key: 'value', label: 'Value', icon: 'lightbulb', style: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800', val: d.value },
+                        { key: 'structure', label: 'Structure', icon: 'layout', style: 'bg-orange-50 text-orange-600 border-orange-100 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800', val: d.structure },
+                        { key: 'cta', label: 'CTA', icon: 'mouse-pointer-2', style: 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:text-rose-300 dark:border-rose-800', val: d.cta }
                     ];
 
                     pillarsContainer.innerHTML = pillars.map(p => {
                         const scoreData = p.val || { score: 0, comment: '' };
                         const maxScore = p.key === 'hook' ? 40 : p.key === 'value' ? 30 : p.key === 'structure' ? 20 : 10;
-
-                        // Pass data as JSON strings for the onclick handler
                         const safeComment = (scoreData.comment || p.label).replace(/'/g, "\\'");
 
                         return `
-                            <div class="badge-pillar ${p.class} group/pillar relative cursor-pointer" 
+                            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${p.style} transition-transform hover:scale-105 cursor-pointer shadow-sm"
                                  onclick="window.showPillarDetail('${p.label}', ${scoreData.score}, ${maxScore}, '${safeComment}', '${p.icon}')">
-                                <i data-lucide="${p.icon}"></i>
-                                <span>${p.label} ${scoreData.score}</span>
+                                <i data-lucide="${p.icon}" class="w-3.5 h-3.5"></i>
+                                <span class="text-xs font-bold">${p.label} <span class="opacity-80 ml-0.5">${scoreData.score}</span></span>
                             </div>
                         `;
                     }).join('');
@@ -677,6 +680,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 widget.classList.remove('hidden');
                 setTimeout(() => {
                     document.body.classList.add('widget-open');
+                    const backdrop = document.getElementById('widget-backdrop');
+                    if (backdrop) backdrop.classList.remove('opacity-0');
                     container.classList.remove('translate-x-full');
                 }, 10);
 
@@ -698,12 +703,18 @@ document.addEventListener('DOMContentLoaded', () => {
             close: function () {
                 const widget = document.getElementById('result-widget');
                 const container = document.getElementById('widget-container');
+                const backdrop = document.getElementById('widget-backdrop');
 
-                container.classList.add('translate-x-full');
+                console.log('Closing widget with animation...');
+
+                if (container) container.classList.add('translate-x-full');
+                if (backdrop) backdrop.classList.add('opacity-0');
+
+                // Wait for animation to finish (300ms + buffer)
                 setTimeout(() => {
                     document.body.classList.remove('widget-open');
-                    widget.classList.add('hidden');
-                }, 300);
+                    if (widget) widget.classList.add('hidden');
+                }, 400);
             },
 
             parseResults: function (content) {
@@ -740,7 +751,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const container = document.getElementById('widget-tabs');
                 container.innerHTML = Object.keys(this.results).map(platform => {
                     const isActive = platform === this.currentPlatform;
-                    return `<button class="platform-tab ${isActive ? 'active' : ''}" onclick="window.widgetService.switchTab('${platform}')">
+                    return `<button onclick="window.widgetService.switchTab('${platform}')"
+                        class="px-5 py-2 rounded-xl text-sm font-bold transition-all duration-200 flex items-center gap-2 whitespace-nowrap
+                        ${isActive
+                            ? 'bg-brand text-white shadow-md shadow-brand/20 ring-2 ring-brand/10'
+                            : 'bg-white dark:bg-dark-card text-gray-500 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 border border-gray-100 dark:border-white/5'}">
+                        ${isActive ? '<i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>' : ''}
                         ${platform}
                     </button>`;
                 }).join('');
@@ -764,8 +780,11 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         // Modal Event Listeners
-        document.getElementById('close-widget-btn').addEventListener('click', () => window.widgetService.close());
-        document.getElementById('widget-backdrop').addEventListener('click', () => window.widgetService.close());
+        const closeBtn = document.getElementById('close-widget-btn');
+        if (closeBtn) closeBtn.addEventListener('click', () => window.widgetService.close());
+
+        const backdrop = document.getElementById('widget-backdrop');
+        if (backdrop) backdrop.addEventListener('click', () => window.widgetService.close());
 
         document.getElementById('widget-copy-content').addEventListener('click', () => {
             const editor = document.getElementById('widget-editor');
@@ -786,6 +805,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         });
+
+        // Widget Title Edit Logic
+        const editTitleBtn = document.getElementById('widget-edit-title-btn');
+        if (editTitleBtn) {
+            editTitleBtn.addEventListener('click', () => {
+                const titleEl = document.getElementById('widget-seo-title');
+                if (!titleEl || titleEl.querySelector('input')) return; // Already editing
+
+                const currentText = titleEl.textContent;
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = currentText === '-' ? '' : currentText;
+                input.className = 'w-full bg-transparent border-b-2 border-brand focus:outline-none font-bold text-gray-800 dark:text-gray-100 p-0 rounded-none';
+                input.placeholder = '제목을 입력하세요';
+
+                titleEl.textContent = '';
+                titleEl.appendChild(input);
+                input.focus();
+
+                const saveTitle = () => {
+                    const newValue = input.value.trim() || '-';
+                    titleEl.textContent = newValue;
+                    if (window.widgetService.metadata) {
+                        window.widgetService.metadata.seoTitle = newValue;
+                    }
+                };
+
+                input.addEventListener('blur', saveTitle);
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        saveTitle();
+                    }
+                });
+            });
+        }
 
         generateBtn.addEventListener('click', async () => {
             const text = inputText.value.trim();
@@ -826,18 +880,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 const languageSelect = document.getElementById('language-select');
                 const selectedLanguage = languageSelect ? languageSelect.value : 'Korean';
 
-                // Get Selected Tone/Style (Replaces complex Brand logic for Quick Create)
+                // Get Selected Brand or Custom Tone
                 const toneSelect = document.getElementById('tone-select');
-                const selectedTone = toneSelect ? toneSelect.value : 'professional';
+                const brandSelect = document.getElementById('brand-select');
+                let brandInput = null;
 
-                // Construct synthetic brand input for AI Service
-                const brandInput = {
-                    name: 'Custom Tone',
-                    tone: selectedTone.charAt(0).toUpperCase() + selectedTone.slice(1),
-                    style: `${selectedTone} Style`,
-                    keywords: '',
-                    forbidden: ''
-                };
+                if (brandSelect && brandSelect.value) {
+                    // 1. Use Selected Brand
+                    const brand = window.brandService.getById(brandSelect.value);
+                    if (brand) {
+                        brandInput = {
+                            name: brand.name,
+                            tone: brand.tone,
+                            style: brand.style,
+                            keywords: brand.keywords || '',
+                            forbidden: brand.forbidden || '',
+                            examples: brand.examples || '',
+                            target: brand.target || ''
+                        };
+                    }
+                }
+
+                if (!brandInput) {
+                    // 2. Fallback to Manual Tone Selection (Custom)
+                    const selectedTone = toneSelect ? toneSelect.value : 'professional';
+                    brandInput = {
+                        name: 'Custom Tone',
+                        tone: selectedTone.charAt(0).toUpperCase() + selectedTone.slice(1),
+                        style: `${selectedTone} Style`,
+                        keywords: '',
+                        forbidden: ''
+                    };
+                }
 
                 // API Key is handled globally via Settings/localStorage now.
 
@@ -972,7 +1046,25 @@ document.addEventListener('DOMContentLoaded', () => {
         select.innerHTML = html;
 
         select.onchange = (e) => {
-            window.brandService.setCurrentBrandId(e.target.value);
+            const brandId = e.target.value;
+            window.brandService.setCurrentBrandId(brandId);
+
+            // Toggle Tone Select based on Brand Selection
+            const toneSelect = document.getElementById('tone-select');
+            if (toneSelect) {
+                if (brandId) {
+                    toneSelect.disabled = true;
+                    toneSelect.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-100', 'dark:bg-white/5');
+                    toneSelect.classList.remove('bg-gray-50');
+
+                    // Optional: Try to set tone to match brand if possible, or leave as is
+                    // toneSelect.value = ... 
+                } else {
+                    toneSelect.disabled = false;
+                    toneSelect.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-100', 'dark:bg-white/5');
+                    toneSelect.classList.add('bg-gray-50');
+                }
+            }
         };
     }
 
@@ -1081,7 +1173,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Global Helpers for Brand
     window.openBrandEditor = function (id = null) {
         const modal = document.getElementById('brand-editor-modal');
-        if (modal) modal.classList.remove('hidden');
+        if (modal) {
+            modal.classList.remove('hidden');
+            // Trigger reflow/animation
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                const content = modal.querySelector('div'); // The inner modal container
+                if (content) content.classList.remove('scale-95');
+            }, 10);
+        }
 
         // Reset Test Area
         const testResultArea = document.getElementById('brand-test-result');
@@ -1096,6 +1196,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const keywordsInput = document.getElementById('brand-keywords');
         const forbiddenInput = document.getElementById('brand-forbidden');
         const examplesInput = document.getElementById('brand-examples');
+        const targetInput = document.getElementById('brand-target');
 
         if (id) {
             const brand = window.brandService.getById(id);
@@ -1106,6 +1207,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (keywordsInput) keywordsInput.value = brand.keywords || '';
             if (forbiddenInput) forbiddenInput.value = brand.forbidden || '';
             if (examplesInput) examplesInput.value = brand.examples || '';
+            if (targetInput) targetInput.value = brand.target || '';
             window.editingBrandId = id;
         } else {
             if (title) title.textContent = '새 브랜드 추가';
@@ -1115,13 +1217,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if (keywordsInput) keywordsInput.value = '';
             if (forbiddenInput) forbiddenInput.value = '';
             if (examplesInput) examplesInput.value = '';
+            if (targetInput) targetInput.value = '';
             window.editingBrandId = null;
         }
     };
 
     window.closeBrandEditor = function () {
         const modal = document.getElementById('brand-editor-modal');
-        if (modal) modal.classList.add('hidden');
+        if (modal) {
+            modal.classList.add('opacity-0');
+            const content = modal.querySelector('div');
+            if (content) content.classList.add('scale-95');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300); // Match transition duration
+        }
     };
 
     window.saveBrandProfile = function () {
@@ -1131,13 +1242,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const keywords = document.getElementById('brand-keywords')?.value;
         const forbidden = document.getElementById('brand-forbidden')?.value;
         const examples = document.getElementById('brand-examples')?.value;
+        const target = document.getElementById('brand-target')?.value;
 
         if (!name || !tone) {
             showToast('브랜드 이름과 톤앤매너는 필수입니다.');
             return;
         }
 
-        const data = { name, tone, style, keywords, forbidden, examples };
+        const data = { name, tone, style, keywords, forbidden, examples, target };
         if (window.editingBrandId) data.id = window.editingBrandId;
 
         window.brandService.save(data);
@@ -1154,6 +1266,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const keywords = document.getElementById('brand-keywords')?.value;
         const forbidden = document.getElementById('brand-forbidden')?.value;
         const examples = document.getElementById('brand-examples')?.value;
+        const target = document.getElementById('brand-target')?.value;
 
         if (!tone) {
             showToast('테스트를 위해 최소한 톤앤매너는 입력해주세요.');
@@ -1168,7 +1281,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
 
         try {
-            const tempBrand = { name, tone, style, keywords, forbidden, examples };
+            const tempBrand = { name, tone, style, keywords, forbidden, examples, target };
             const testText = "AI 기술이 우리의 일상과 비즈니스를 어떻게 변화시킬까요? 미래를 준비하는 자세에 대해 이야기해주세요.";
 
             // General test context
@@ -1260,6 +1373,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // Reveal Layout
         document.documentElement.classList.remove('app-loading');
+
+        // Brand Modal Listeners
+        const createBrandBtn = document.getElementById('create-brand-btn');
+        const closeBrandModalBtn = document.getElementById('close-brand-modal-btn');
+        const cancelBrandBtn = document.getElementById('cancel-brand-btn');
+        const saveBrandBtn = document.getElementById('save-brand-btn');
+
+        if (createBrandBtn) createBrandBtn.onclick = () => window.openBrandEditor();
+        if (closeBrandModalBtn) closeBrandModalBtn.onclick = window.closeBrandEditor;
+        if (cancelBrandBtn) cancelBrandBtn.onclick = window.closeBrandEditor;
+        if (saveBrandBtn) saveBrandBtn.onclick = window.saveBrandProfile;
+
     }, 50);
 
 }); // End of DOMContentLoaded

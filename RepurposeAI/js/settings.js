@@ -42,9 +42,10 @@ function initSettingsLogic() {
     }
 
     // --- Gemini Settings ---
-    const apiKeyInput = document.getElementById('settings-api-key');
-    const saveKeyBtn = document.getElementById('save-api-key-btn');
-    const deleteKeyBtn = document.getElementById('delete-api-key-btn');
+    // --- Gemini Settings ---
+    const apiKeyInput = document.getElementById('gemini-api-key');
+    const saveKeyBtn = document.getElementById('save-gemini-key-btn');
+    const deleteKeyBtn = document.getElementById('delete-gemini-key-btn');
     const validateBtn = document.getElementById('validate-api-key-btn');
     const statusIndicator = document.getElementById('api-status-indicator');
     const statusText = document.getElementById('api-status-text');
